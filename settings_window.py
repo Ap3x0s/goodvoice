@@ -1,42 +1,51 @@
-"""GoodVoice Settings — Minimalism design (dark adaptation)."""
+"""GoodVoice Settings — Minimalism + tabler icons + styled combos."""
 
 import sys
 from datetime import datetime, timedelta
 from collections import defaultdict
+from pathlib import Path
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
     QPushButton, QMessageBox, QApplication, QFrame,
     QStackedWidget, QScrollArea, QSizePolicy, QToolTip
 )
-from PyQt6.QtCore import Qt, QRectF, QPointF, QPropertyAnimation, QEasingCurve
+from PyQt6.QtCore import Qt, QRectF, QPointF, QSize
 from PyQt6.QtGui import (
     QFont, QColor, QPainter, QLinearGradient, QPen, QBrush,
-    QRadialGradient, QPainterPath
+    QRadialGradient, QPainterPath, QPixmap, QIcon
 )
 
 from settings import Settings
 from stats import Stats
 from history import History
 
+# ── Icons ────────────────────────────────────────────────────────
 
-# ── Minimalism Tokens ────────────────────────────────────────────
+ICONS_DIR = Path(__file__).parent / "assets" / "icons"
 
-# From the design page, adapted to dark:
-# Original: bg-white, text-black, border-gray-100, accent #0066FF
-# Dark adaptation:
-
-BG       = "#000000"       # pure black background
-BG2      = "#0A0A0A"       # alternating sections
-CARD     = "#111111"       # card background
-CARD_B   = "rgba(255,255,255,0.06)"  # border
-T1       = "#FFFFFF"        # primary text
-T2       = "#666666"        # body text (gray from palette)
-T3       = "#999999"        # muted
-AC       = "#0066FF"        # accent blue from palette
-AC_H     = "#0052CC"        # accent hover
+def load_icon(name, size=20):
+    path = ICONS_DIR / f"{name}.svg"
+    if path.exists():
+        pixmap = QPixmap(str(path))
+        return pixmap.scaled(QSize(size, size), Qt.AspectRatioMode.KeepAspectRatio,
+                           Qt.TransformationMode.SmoothTransformation)
+    return QPixmap()
 
 
-# ── Card (minimalist: sharp corners, thin border) ────────────────
+# ── Tokens ───────────────────────────────────────────────────────
+
+BG    = "#000000"
+BG2   = "#0A0A0A"
+CARD  = "#111111"
+BDR   = "rgba(255,255,255,0.06)"
+T1    = "#FFFFFF"
+T2    = "#666666"
+T3    = "#999999"
+AC    = "#0066FF"
+AC_H  = "#0052CC"
+
+
+# ── Card ─────────────────────────────────────────────────────────
 
 class Card(QWidget):
     def __init__(self):
@@ -46,38 +55,29 @@ class Card(QWidget):
         self.setMouseTracking(True)
         self.setMinimumHeight(72)
 
-    def enterEvent(self, e):
-        self._t = 1.0
-    def leaveEvent(self, e):
-        self._t = 0.0
+    def enterEvent(self, e): self._t = 1.0
+    def leaveEvent(self, e): self._t = 0.0
 
     def paintEvent(self, e):
         self._g += (self._t - self._g) * 0.15
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         w, h = self.width(), self.height()
-
-        # Fill
         p.setPen(Qt.PenStyle.NoPen)
         p.setBrush(QBrush(QColor(CARD)))
         p.drawRect(0, 0, w, h)
-
-        # Border — thin, subtle
         if self._g > 0.01:
-            bc = QColor(AC)
-            bc.setAlpha(int(15 + self._g * 30))
-            p.setPen(QPen(bc, 1))
+            c = QColor(AC); c.setAlpha(int(15 + self._g * 30))
+            p.setPen(QPen(c, 1))
         else:
-            p.setPen(QPen(QColor(CARD_B), 1))
+            p.setPen(QPen(QColor(BDR), 1))
         p.setBrush(Qt.BrushStyle.NoBrush)
         p.drawRect(0, 0, w, h)
         p.end()
-
-        if abs(self._g - self._t) > 0.005:
-            self.update()
+        if abs(self._g - self._t) > 0.005: self.update()
 
 
-# ── Switch (minimalist: square, clean) ───────────────────────────
+# ── Switch ───────────────────────────────────────────────────────
 
 class Switch(QWidget):
     def __init__(self, on=False):
@@ -88,26 +88,17 @@ class Switch(QWidget):
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
-    def isChecked(self):
-        return self._on
-
-    def mousePressEvent(self, e):
-        self._on = not self._on
-        self.update()
-
+    def isChecked(self): return self._on
+    def mousePressEvent(self, e): self._on = not self._on; self.update()
     def keyPressEvent(self, e):
         if e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Space):
-            self._on = not self._on
-            self.update()
+            self._on = not self._on; self.update()
 
     def paintEvent(self, e):
         tgt = 1.0 if self._on else 0.0
         self._p += (tgt - self._p) * 0.2
-
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        # Track — clean rectangle
         if self._on:
             p.setPen(Qt.PenStyle.NoPen)
             p.setBrush(QBrush(QColor(AC)))
@@ -116,62 +107,119 @@ class Switch(QWidget):
             p.setPen(QPen(QColor(T2), 1))
             p.setBrush(Qt.BrushStyle.NoBrush)
             p.drawRect(0, 0, 48, 28)
-
-        # Thumb — white square
         x = 3 + self._p * 20
         p.setPen(Qt.PenStyle.NoPen)
         p.setBrush(QBrush(QColor(T1)))
         p.drawRect(int(x), 4, 20, 20)
-
-        # Focus
         if self.hasFocus():
             p.setPen(QPen(QColor(AC), 2))
             p.setBrush(Qt.BrushStyle.NoBrush)
             p.drawRect(-2, -2, 52, 32)
-
         p.end()
-        if abs(self._p - tgt) > 0.01:
-            self.update()
+        if abs(self._p - tgt) > 0.01: self.update()
 
 
-# ── Combo (minimalist: no border-radius, clean) ──────────────────
+# ── Styled Combo ─────────────────────────────────────────────────
 
 def combo(items, cur=None):
     c = QComboBox()
     c.addItems(items)
-    if cur and cur in items:
-        c.setCurrentText(cur)
+    if cur and cur in items: c.setCurrentText(cur)
     c.setFixedWidth(180)
     c.setFixedHeight(40)
     c.setCursor(Qt.CursorShape.PointingHandCursor)
+    c.setStyleSheet(f"""
+        QComboBox {{
+            background: {CARD};
+            color: {T1};
+            border: 1px solid {BDR};
+            border-radius: 0px;
+            padding: 8px 32px 8px 12px;
+            font-size: 13px;
+            font-family: "Segoe UI";
+            min-height: 40px;
+        }}
+        QComboBox:hover {{
+            border-color: rgba(0,102,255,0.3);
+            background: rgba(255,255,255,0.03);
+        }}
+        QComboBox:focus {{
+            border-color: {AC};
+        }}
+        QComboBox::drop-down {{
+            border: none;
+            width: 32px;
+            subcontrol-position: center right;
+        }}
+        QComboBox::down-arrow {{
+            image: none;
+            width: 12px;
+            height: 12px;
+        }}
+        QComboBox QAbstractItemView {{
+            background: {CARD};
+            color: {T1};
+            border: 1px solid {BDR};
+            selection-background-color: rgba(0,102,255,0.15);
+            selection-color: {T1};
+            border-radius: 0px;
+            padding: 4px;
+            outline: none;
+        }}
+        QComboBox QAbstractItemView::item {{
+            padding: 8px 12px;
+            min-height: 32px;
+        }}
+        QComboBox QAbstractItemView::item:hover {{
+            background: rgba(0,102,255,0.1);
+        }}
+        QComboBox QAbstractItemView::item:selected {{
+            background: rgba(0,102,255,0.15);
+        }}
+    """)
     return c
 
 
-# ── Nav (minimalist: clean, no border-radius) ────────────────────
+# ── Nav ──────────────────────────────────────────────────────────
 
 class Nav(QPushButton):
-    def __init__(self, icon, text):
-        super().__init__(f"  {icon}  {text}")
+    def __init__(self, icon_name, text):
+        icon_pixmap = load_icon(icon_name, 18)
+        super().__init__()
         self.setFixedHeight(44)
         self.setCheckable(True)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        self.setIcon(QIcon(icon_pixmap))
+        self.setIconSize(QSize(18, 18))
+        self.setText(f"  {text}")
+
         self.setStyleSheet(f"""
             QPushButton {{
-                background: transparent; color: {T3};
-                border: none; border-left: 2px solid transparent;
-                padding: 0 16px; text-align: left;
-                font-size: 13px; font-family: "Segoe UI";
+                background: transparent;
+                color: {T3};
+                border: none;
+                border-left: 2px solid transparent;
+                padding: 0 16px;
+                text-align: left;
+                font-size: 13px;
+                font-family: "Segoe UI";
                 letter-spacing: 0.5px;
             }}
-            QPushButton:hover {{ background: rgba(255,255,255,0.03); color: {T2}; }}
+            QPushButton:hover {{
+                background: rgba(255,255,255,0.03);
+                color: {T2};
+            }}
             QPushButton:checked {{
-                background: rgba(0,102,255,0.08); color: {T1};
-                font-weight: 500; border-left: 2px solid {AC};
+                background: rgba(0,102,255,0.08);
+                color: {T1};
+                font-weight: 500;
+                border-left: 2px solid {AC};
             }}
         """)
 
 
-# ── Chart (minimalist: clean bars, no glow) ──────────────────────
+# ── Chart ────────────────────────────────────────────────────────
 
 class Chart(QWidget):
     def __init__(self, data):
@@ -190,11 +238,9 @@ class Chart(QWidget):
             if 0 <= i < len(self.data):
                 l, v, d = self.data[i]
                 QToolTip.showText(e.globalPosition().toPoint(), f"{d}: {v} \u0441\u043b\u043e\u0432", self)
-            else:
-                QToolTip.hideText()
+            else: QToolTip.hideText()
 
-    def leaveEvent(self, e):
-        self._h = -1; self.update(); QToolTip.hideText()
+    def leaveEvent(self, e): self._h = -1; self.update(); QToolTip.hideText()
 
     def _hit(self, pos):
         w = self.width()
@@ -204,8 +250,7 @@ class Chart(QWidget):
         sx = 16 + (w - 32 - total) // 2
         for i in range(n):
             x = sx + i * (bw + 8)
-            if x <= pos.x() <= x + bw:
-                return i
+            if x <= pos.x() <= x + bw: return i
         return -1
 
     def paintEvent(self, e):
@@ -217,7 +262,6 @@ class Chart(QWidget):
         ch = h - mt - mb
         mx = max(v for _, v, _ in self.data) or 1
 
-        # Grid
         p.setPen(QPen(QColor(255, 255, 255, 4), 1, Qt.PenStyle.DotLine))
         for i in range(1, 4):
             p.drawLine(16, mt + int(ch * i / 4), w - 16, mt + int(ch * i / 4))
@@ -247,7 +291,7 @@ class Chart(QWidget):
         p.end()
 
 
-# ── History row (simplified) ─────────────────────────────────────
+# ── History row ──────────────────────────────────────────────────
 
 class Row(QFrame):
     def __init__(self, entry):
@@ -256,20 +300,14 @@ class Row(QFrame):
         self.setFixedHeight(56)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setStyleSheet(f"""
-            QFrame {{
-                background: {CARD};
-                border: 1px solid {CARD_B};
-            }}
-            QFrame:hover {{
-                border-color: rgba(0,102,255,0.3);
-            }}
+            QFrame {{ background: {CARD}; border: 1px solid {BDR}; }}
+            QFrame:hover {{ border-color: rgba(0,102,255,0.3); }}
         """)
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(16, 0, 16, 0)
         layout.setSpacing(12)
 
-        # Time
         ts = datetime.fromtimestamp(entry["timestamp"]).strftime("%H:%M")
         time_lbl = QLabel(ts)
         time_lbl.setFont(QFont("Consolas", 10))
@@ -277,7 +315,6 @@ class Row(QFrame):
         time_lbl.setFixedWidth(52)
         layout.addWidget(time_lbl)
 
-        # Text
         txt = self._text[:80] + ("..." if len(self._text) > 80 else "")
         text_lbl = QLabel(txt)
         text_lbl.setFont(QFont("Segoe UI", 13))
@@ -285,16 +322,10 @@ class Row(QFrame):
         text_lbl.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         layout.addWidget(text_lbl, 1)
 
-        # Chip
         wc = entry.get("word_count", len(self._text.split()))
-        chip = QLabel(f"{wc} слов")
+        chip = QLabel(f"{wc} \u0441\u043b\u043e\u0432")
         chip.setFont(QFont("Consolas", 10))
-        chip.setStyleSheet(f"""
-            color: {AC};
-            background: rgba(0,102,255,8);
-            border: 1px solid rgba(0,102,255,40);
-            padding: 4px 10px;
-        """)
+        chip.setStyleSheet(f"color:{AC};background:rgba(0,102,255,8);border:1px solid rgba(0,102,255,40);padding:4px 10px;")
         chip.setFixedWidth(76)
         chip.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(chip)
@@ -303,7 +334,7 @@ class Row(QFrame):
         QApplication.clipboard().setText(self._text)
 
 
-# ── KPI (minimalist: sharp, clean) ───────────────────────────────
+# ── KPI ──────────────────────────────────────────────────────────
 
 class KPI(QWidget):
     def __init__(self, val, lbl):
@@ -316,11 +347,10 @@ class KPI(QWidget):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         w, h = self.width(), self.height()
-
         p.setPen(Qt.PenStyle.NoPen)
         p.setBrush(QBrush(QColor(CARD)))
         p.drawRect(0, 0, w, h)
-        p.setPen(QPen(QColor(CARD_B), 1))
+        p.setPen(QPen(QColor(BDR), 1))
         p.setBrush(Qt.BrushStyle.NoBrush)
         p.drawRect(0, 0, w, h)
 
@@ -360,34 +390,17 @@ class SettingsWindow(QWidget):
             }}
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height:0; }}
             QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{ background:none; }}
-            QComboBox {{
-                background: {CARD}; color: {T1};
-                border: 1px solid {CARD_B}; border-radius: 0px;
-                padding: 8px 12px; font-size: 13px;
-                min-height: 40px;
-            }}
-            QComboBox:hover {{ border-color: rgba(0,102,255,0.3); }}
-            QComboBox::drop-down {{ border:none; width:28px; }}
-            QComboBox:focus {{ border-color: {AC}; }}
-            QComboBox QAbstractItemView {{
-                background: {CARD}; color: {T1};
-                border: 1px solid {CARD_B};
-                selection-background-color: rgba(0,102,255,0.15);
-                border-radius: 0px; padding: 4px;
-            }}
             QPushButton {{
                 background: transparent; color: {T2};
-                border: 1px solid {CARD_B}; border-radius: 0px;
+                border: 1px solid {BDR}; border-radius: 0px;
                 padding: 10px 20px; font-size: 13px; font-weight: 500;
-                min-height: 44px; min-width: 44px;
-                letter-spacing: 0.5px;
+                min-height: 44px; min-width: 44px; letter-spacing: 0.5px;
             }}
             QPushButton:hover {{ border-color: rgba(0,102,255,0.3); color: {T1}; }}
             QPushButton:pressed {{ background: rgba(255,255,255,0.03); }}
             QPushButton#ok {{
-                background: {AC}; color: {T1};
-                border: none; font-weight: 600; min-width: 120px;
-                letter-spacing: 1px;
+                background: {AC}; color: {T1}; border: none;
+                font-weight: 600; min-width: 120px; letter-spacing: 1px;
             }}
             QPushButton#ok:hover {{ background: {AC_H}; }}
             QPushButton#ok:pressed {{ background: {AC_H}; }}
@@ -402,7 +415,7 @@ class SettingsWindow(QWidget):
         # Sidebar
         sb = QFrame()
         sb.setFixedWidth(224)
-        sb.setStyleSheet(f"background:{BG2};border-right:1px solid {CARD_B};")
+        sb.setStyleSheet(f"background:{BG2};border-right:1px solid {BDR};")
         sbl = QVBoxLayout(sb)
         sbl.setContentsMargins(16, 24, 16, 24)
         sbl.setSpacing(4)
@@ -413,9 +426,9 @@ class SettingsWindow(QWidget):
         sbl.addWidget(logo)
 
         self._nav = []
-        for icon, name in [("\u2699", "\u041e\u0441\u043d\u043e\u0432\u043d\u044b\u0435"),
-                           ("\u25c6", "\u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430"),
-                           ("\u25a0", "\u0418\u0441\u0442\u043e\u0440\u0438\u044f")]:
+        for icon, name in [("settings", "\u041e\u0441\u043d\u043e\u0432\u043d\u044b\u0435"),
+                           ("chart-bar", "\u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430"),
+                           ("history", "\u0418\u0441\u0442\u043e\u0440\u0438\u044f")]:
             b = Nav(icon, name)
             b.clicked.connect(lambda checked, n=name: self._goto(n))
             sbl.addWidget(b)
@@ -444,7 +457,7 @@ class SettingsWindow(QWidget):
 
         line = QFrame()
         line.setFixedHeight(1)
-        line.setStyleSheet(f"background:{CARD_B};border:none;margin:12px 0;")
+        line.setStyleSheet(f"background:{BDR};border:none;margin:12px 0;")
         ctl.addWidget(line)
 
         fl = QHBoxLayout()
@@ -467,8 +480,7 @@ class SettingsWindow(QWidget):
             {"\u041e\u0441\u043d\u043e\u0432\u043d\u044b\u0435": 0,
              "\u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430": 1,
              "\u0418\u0441\u0442\u043e\u0440\u0438\u044f": 2}[name])
-        for n, b in self._nav:
-            b.setChecked(n == name)
+        for n, b in self._nav: b.setChecked(n == name)
 
     def _pg_gen(self):
         sa = QScrollArea()
