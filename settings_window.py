@@ -1,4 +1,4 @@
-"""GoodVoice Settings — strict Vercel/Anthropic Dark palette."""
+"""GoodVoice Settings — compact Vercel/Anthropic Dark layout."""
 
 import sys
 import time
@@ -16,236 +16,163 @@ from settings import Settings
 from stats import Stats
 from history import History
 
-try:
-    import matplotlib
-    matplotlib.use("QtAgg")
-    HAS_MATPLOTLIB = True
-except ImportError:
-    HAS_MATPLOTLIB = False
+
+# ── Tokens ───────────────────────────────────────────────────────
+
+BG         = "#0B0B0E"
+BG_SB      = "#0F0F14"
+BG_CARD    = "#16161E"
+BG_ACTIVE  = "#1E1E2D"
+BORDER     = "rgba(255,255,255,0.08)"
+BORDER_H   = "rgba(255,255,255,0.14)"
+TEXT       = "#FFFFFF"
+TEXT2      = "#94A3B8"
+TEXT3      = "#64748B"
+ACCENT     = "#6366F1"
+ACCENT_H   = "#818CF8"
+RED        = "#EF4444"
+FONT       = "Segoe UI"
+FM         = "Consolas"
+R          = 10
+RS         = 6
 
 
-# ── Strict Design Tokens (Vercel / Anthropic Dark) ───────────────
+# ── Widgets ──────────────────────────────────────────────────────
 
-BG          = "#0B0B0E"
-BG_SIDEBAR  = "#0F0F14"
-BG_CARD     = "#16161E"
-BG_CARD_H   = "#1C1C26"
-BG_ACTIVE   = "#1E1E2D"
-BORDER      = "rgba(255, 255, 255, 0.08)"
-BORDER_H    = "rgba(255, 255, 255, 0.14)"
-
-# Text hierarchy
-TEXT        = "#FFFFFF"      # headings, primary
-TEXT_MID    = "#94A3B8"      # descriptions, secondary
-TEXT_DIM    = "#64748B"      # muted, labels
-
-# Accent — single accent color throughout
-ACCENT      = "#6366F1"      # Indigo-500
-ACCENT_H    = "#818CF8"      # Indigo-400 (hover/lighter)
-ACCENT_D    = "#4F46E5"      # Indigo-600 (darker)
-
-FONT        = "Segoe UI"
-FONT_MONO   = "Consolas"
-RADIUS      = 12
-RADIUS_SM   = 8
-
-
-# ── Helpers ──────────────────────────────────────────────────────
-
-def card_frame() -> QFrame:
+def card(h: int = None) -> QFrame:
     f = QFrame()
-    f.setStyleSheet(f"""
-        QFrame {{
-            background: {BG_CARD};
-            border: 1px solid {BORDER};
-            border-radius: {RADIUS}px;
-        }}
-        QFrame:hover {{
-            border-color: {BORDER_H};
-        }}
-    """)
+    style = f"background:{BG_CARD};border:1px solid {BORDER};border-radius:{R}px;"
+    if h:
+        style += f"min-height:{h}px;max-height:{h}px;"
+    f.setStyleSheet(style)
     return f
 
 
-def kpi_card(value: str, label: str) -> QFrame:
-    """Single-color KPI card — all values white."""
-    f = card_frame()
-    layout = QVBoxLayout(f)
-    layout.setContentsMargins(20, 18, 20, 18)
-    layout.setSpacing(6)
-    val = QLabel(value)
-    val.setFont(QFont(FONT_MONO, 30, QFont.Weight.Bold))
-    val.setStyleSheet(f"color: {TEXT}; background: transparent; border: none;")
-    layout.addWidget(val)
-    lbl = QLabel(label)
-    lbl.setFont(QFont(FONT, 12))
-    lbl.setStyleSheet(f"color: {TEXT_MID}; background: transparent; border: none;")
-    layout.addWidget(lbl)
+def kpi(value: str, label: str) -> QFrame:
+    f = card(88)
+    l = QVBoxLayout(f)
+    l.setContentsMargins(16, 12, 16, 12)
+    l.setSpacing(2)
+    v = QLabel(value)
+    v.setFont(QFont(FM, 26, QFont.Weight.Bold))
+    v.setStyleSheet(f"color:{TEXT};background:transparent;border:none;")
+    l.addWidget(v)
+    lb = QLabel(label)
+    lb.setFont(QFont(FONT, 11))
+    lb.setStyleSheet(f"color:{TEXT2};background:transparent;border:none;")
+    l.addWidget(lb)
     return f
 
 
-def card_row_text(title: str, desc: str = "") -> QVBoxLayout:
-    col = QVBoxLayout()
-    col.setSpacing(2)
-    t = QLabel(title)
-    t.setFont(QFont(FONT, 14, QFont.Weight.Medium))
-    t.setStyleSheet(f"color: {TEXT}; background: transparent; border: none;")
-    col.addWidget(t)
-    if desc:
-        d = QLabel(desc)
-        d.setFont(QFont(FONT, 11))
-        d.setStyleSheet(f"color: {TEXT_DIM}; background: transparent; border: none;")
-        d.setWordWrap(True)
-        col.addWidget(d)
-    return col
-
-
-def styled_combo(items: list, current: str = None) -> QComboBox:
+def combo(items, cur=None) -> QComboBox:
     c = QComboBox()
     c.addItems(items)
-    if current and current in items:
-        c.setCurrentText(current)
-    c.setFixedHeight(38)
+    if cur and cur in items:
+        c.setCurrentText(cur)
+    c.setFixedHeight(34)
     return c
 
 
-# ── Sidebar Button ───────────────────────────────────────────────
-
-class SidebarBtn(QPushButton):
-    def __init__(self, text: str, parent=None):
-        super().__init__(text, parent)
-        self.setFixedHeight(40)
+class NavBtn(QPushButton):
+    def __init__(self, text):
+        super().__init__(text)
+        self.setFixedHeight(36)
         self.setCheckable(True)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setStyleSheet(f"""
-            QPushButton {{
-                background: transparent;
-                color: {TEXT_DIM};
-                border: none;
-                border-radius: {RADIUS_SM}px;
-                padding: 0 16px;
-                text-align: left;
-                font-size: 13px;
-                font-family: {FONT};
-            }}
-            QPushButton:hover {{
-                background: #181824;
-                color: {TEXT_MID};
-            }}
-            QPushButton:checked {{
-                background: {BG_ACTIVE};
-                color: {TEXT};
-                font-weight: 600;
-                border-left: 3px solid {ACCENT};
-                padding-left: 13px;
-            }}
+            QPushButton{{background:transparent;color:{TEXT3};border:none;
+                border-radius:{RS}px;padding:0 14px;text-align:left;
+                font-size:13px;font-family:{FONT};}}
+            QPushButton:hover{{background:#181824;color:{TEXT2};}}
+            QPushButton:checked{{background:{BG_ACTIVE};color:{TEXT};
+                font-weight:600;border-left:3px solid {ACCENT};padding-left:11px;}}
         """)
 
 
-# ── Bar Chart ────────────────────────────────────────────────────
-
 class BarChart(QWidget):
-    def __init__(self, data: list, parent=None):
-        super().__init__(parent)
+    def __init__(self, data):
+        super().__init__()
         self.data = data
-        self.setMinimumHeight(200)
+        self.setFixedHeight(160)
 
-    def paintEvent(self, event):
+    def paintEvent(self, e):
         if not self.data:
             return
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
-
         w, h = self.width(), self.height()
-        ml, mr, mt, mb = 8, 8, 16, 36
+        ml, mr, mt, mb = 4, 4, 10, 28
         cw, ch = w - ml - mr, h - mt - mb
-        max_val = max(v for _, v in self.data) if self.data else 1
-        if max_val == 0:
-            max_val = 1
+        mx = max(v for _, v in self.data) or 1
 
-        # Grid lines
-        p.setPen(QPen(QColor(255, 255, 255, 8), 1, Qt.PenStyle.DotLine))
+        # Grid
+        pen = QPen(QColor(255, 255, 255, 8), 1, Qt.PenStyle.DotLine)
+        p.setPen(pen)
         for i in range(1, 5):
             gy = mt + int(ch * i / 5)
             p.drawLine(ml, gy, w - mr, gy)
 
         n = len(self.data)
-        bar_w = max(10, min(20, (cw - (n - 1) * 6) // n))
-        gap = 6
-        total = n * bar_w + (n - 1) * gap
+        bw = max(12, min(18, (cw - (n - 1) * 5) // n))
+        gap = 5
+        total = n * bw + (n - 1) * gap
         sx = ml + (cw - total) // 2
 
-        for i, (label, value) in enumerate(self.data):
-            x = sx + i * (bar_w + gap)
-            bar_h = max(4, int((value / max_val) * ch))
-            y = mt + ch - bar_h
-
-            # Gradient bar
-            grad = QLinearGradient(x, y, x, y + bar_h)
-            grad.setColorAt(0, QColor(ACCENT))
-            grad.setColorAt(1, QColor(ACCENT_D))
+        for i, (lbl, val) in enumerate(self.data):
+            x = sx + i * (bw + gap)
+            bh = max(4, int((val / mx) * ch))
+            y = mt + ch - bh
+            g = QLinearGradient(x, y, x, y + bh)
+            g.setColorAt(0, QColor(ACCENT))
+            g.setColorAt(1, QColor("#4F46E5"))
             p.setPen(Qt.PenStyle.NoPen)
-            p.setBrush(QBrush(grad))
-            p.drawRoundedRect(x, y, bar_w, bar_h, 3, 3)
-
-            # Day label
-            p.setPen(QColor(TEXT_DIM))
+            p.setBrush(QBrush(g))
+            p.drawRoundedRect(x, y, bw, bh, 3, 3)
+            p.setPen(QColor(TEXT3))
             p.setFont(QFont(FONT, 8))
-            p.drawText(x, h - 14, bar_w, 16, Qt.AlignmentFlag.AlignCenter, label)
+            p.drawText(x, h - 18, bw, 16, Qt.AlignmentFlag.AlignCenter, lbl)
 
         p.end()
 
 
-# ── History Item ─────────────────────────────────────────────────
-
-class HistoryItem(QFrame):
-    def __init__(self, entry: dict, parent=None):
-        super().__init__(parent)
+class HistoryRow(QFrame):
+    def __init__(self, entry):
+        super().__init__()
         self.setStyleSheet(f"""
-            QFrame {{
-                background: {BG_CARD};
-                border: 1px solid {BORDER};
-                border-radius: {RADIUS_SM}px;
-                padding: 14px 16px;
-            }}
-            QFrame:hover {{
-                background: {BG_CARD_H};
-            }}
+            QFrame{{background:{BG_CARD};border:1px solid {BORDER};
+                border-radius:{RS}px;padding:10px 14px;}}
+            QFrame:hover{{background:{BG_CARD}{{}}.replace('{BG_CARD}','#1C1C26');}}
         """)
-        layout = QHBoxLayout(self)
-        layout.setSpacing(14)
+        self.setFixedHeight(52)
+        l = QHBoxLayout(self)
+        l.setSpacing(12)
+        l.setContentsMargins(14, 0, 14, 0)
 
-        # Time
         ts = datetime.fromtimestamp(entry["timestamp"]).strftime("%H:%M")
-        time_lbl = QLabel(ts)
-        time_lbl.setFont(QFont(FONT_MONO, 11))
-        time_lbl.setStyleSheet(f"color: {TEXT_DIM}; background: transparent; border: none;")
-        time_lbl.setFixedWidth(48)
-        layout.addWidget(time_lbl)
+        t = QLabel(ts)
+        t.setFont(QFont(FM, 11))
+        t.setStyleSheet(f"color:{TEXT3};background:transparent;border:none;")
+        t.setFixedWidth(44)
+        l.addWidget(t)
 
-        # Text
-        text = entry["text"][:100] + ("..." if len(entry["text"]) > 100 else "")
-        text_lbl = QLabel(text)
-        text_lbl.setFont(QFont(FONT, 13))
-        text_lbl.setStyleSheet(f"color: {TEXT_MID}; background: transparent; border: none;")
-        text_lbl.setWordWrap(True)
-        layout.addWidget(text_lbl, 1)
+        txt = entry["text"][:80] + ("..." if len(entry["text"]) > 80 else "")
+        tl = QLabel(txt)
+        tl.setFont(QFont(FONT, 12))
+        tl.setStyleSheet(f"color:{TEXT2};background:transparent;border:none;")
+        l.addWidget(tl, 1)
 
-        # Word count chip
         chip = QLabel(f"{entry['word_count']} слов")
-        chip.setFont(QFont(FONT, 10))
+        chip.setFont(QFont(FONT, 9))
         chip.setStyleSheet(f"""
-            color: {ACCENT};
-            background: rgba(99, 102, 241, 0.1);
-            border: 1px solid rgba(99, 102, 241, 0.2);
-            border-radius: 12px;
-            padding: 4px 10px;
+            color:{ACCENT};background:rgba(99,102,241,0.1);
+            border:1px solid rgba(99,102,241,0.2);
+            border-radius:10px;padding:3px 8px;
         """)
-        chip.setFixedHeight(26)
-        layout.addWidget(chip)
+        chip.setFixedHeight(22)
+        l.addWidget(chip)
 
 
-# ── Main Window ──────────────────────────────────────────────────
+# ── Window ───────────────────────────────────────────────────────
 
 class SettingsWindow(QWidget):
     def __init__(self):
@@ -253,378 +180,288 @@ class SettingsWindow(QWidget):
         self.settings = Settings().load()
         self.stats = Stats().load()
         self.history = History().load()
-        self._init_ui()
+        self._build()
 
-    def _init_ui(self):
+    def _build(self):
         self.setWindowTitle("GoodVoice")
-        self.setFixedSize(720, 560)
+        self.setFixedSize(680, 500)
         self.setStyleSheet(f"""
-            QWidget {{
-                background: {BG};
-                color: {TEXT};
-                font-family: {FONT};
-            }}
-            QScrollArea {{
-                border: none;
-                background: transparent;
-            }}
-            QScrollBar:vertical {{
-                background: transparent;
-                width: 6px;
-            }}
-            QScrollBar::handle:vertical {{
-                background: {TEXT_DIM};
-                border-radius: 3px;
-                min-height: 30px;
-            }}
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
-                height: 0;
-            }}
-            QComboBox {{
-                background: {BG_CARD};
-                color: {TEXT};
-                border: 1px solid {BORDER};
-                border-radius: {RADIUS_SM}px;
-                padding: 8px 14px;
-                font-size: 13px;
-                min-width: 180px;
-                min-height: 38px;
-            }}
-            QComboBox:hover {{
-                border-color: {ACCENT};
-            }}
-            QComboBox::drop-down {{
-                border: none;
-                width: 28px;
-            }}
-            QComboBox QAbstractItemView {{
-                background: {BG_CARD};
-                color: {TEXT};
-                border: 1px solid {BORDER};
-                selection-background-color: {ACCENT}33;
-                border-radius: {RADIUS_SM}px;
-                padding: 4px;
-            }}
-            QCheckBox {{
-                color: {TEXT};
-                font-size: 13px;
-                spacing: 10px;
-            }}
-            QCheckBox::indicator {{
-                width: 20px;
-                height: 20px;
-                border: 2px solid {BORDER_H};
-                border-radius: 6px;
-                background: {BG_CARD};
-            }}
-            QCheckBox::indicator:checked {{
-                background: {ACCENT};
-                border-color: {ACCENT};
-            }}
-            QPushButton {{
-                background: transparent;
-                color: {TEXT_MID};
-                border: 1px solid {BORDER};
-                border-radius: {RADIUS_SM}px;
-                padding: 10px 20px;
-                font-size: 13px;
-                font-weight: 500;
-                min-height: 38px;
-            }}
-            QPushButton:hover {{
-                border-color: {ACCENT};
-                color: {TEXT};
-            }}
-            QPushButton#primary {{
-                background: {ACCENT};
-                color: {TEXT};
-                border: none;
-                font-weight: 600;
-            }}
-            QPushButton#primary:hover {{
-                background: {ACCENT_H};
-            }}
-            QPushButton#danger {{
-                color: #EF4444;
-                border-color: rgba(239, 68, 68, 0.3);
-            }}
-            QPushButton#danger:hover {{
-                background: rgba(239, 68, 68, 0.1);
-                border-color: rgba(239, 68, 68, 0.5);
-            }}
+            QWidget{{background:{BG};color:{TEXT};font-family:{FONT};}}
+            QScrollArea{{border:none;background:transparent;}}
+            QScrollBar:vertical{{background:transparent;width:4px;}}
+            QScrollBar::handle:vertical{{background:rgba(255,255,255,0.15);
+                border-radius:2px;min-height:20px;}}
+            QScrollBar::add-line:vertical,QScrollBar::sub-line:vertical{{height:0;}}
+            QComboBox{{background:{BG_CARD};color:{TEXT};border:1px solid {BORDER};
+                border-radius:{RS}px;padding:6px 10px;font-size:12px;
+                min-width:150px;max-height:34px;}}
+            QComboBox:hover{{border-color:{ACCENT};}}
+            QComboBox::drop-down{{border:none;width:24px;}}
+            QComboBox QAbstractItemView{{background:{BG_CARD};color:{TEXT};
+                border:1px solid {BORDER};selection-background-color:{ACCENT}33;
+                border-radius:{RS}px;padding:2px;}}
+            QCheckBox{{color:{TEXT};font-size:12px;spacing:8px;}}
+            QCheckBox::indicator{{width:18px;height:18px;border:2px solid {BORDER_H};
+                border-radius:5px;background:{BG_CARD};}}
+            QCheckBox::indicator:checked{{background:{ACCENT};border-color:{ACCENT};}}
+            QPushButton{{background:transparent;color:{TEXT2};border:1px solid {BORDER};
+                border-radius:{RS}px;padding:8px 16px;font-size:12px;
+                font-weight:500;max-height:34px;}}
+            QPushButton:hover{{border-color:{ACCENT};color:{TEXT};}}
+            QPushButton#ok{{background:{ACCENT};color:{TEXT};border:none;font-weight:600;
+                min-width:110px;}}
+            QPushButton#ok:hover{{background:{ACCENT_H};}}
+            QPushButton#danger{{color:{RED};border-color:rgba(239,68,68,0.3);}}
+            QPushButton#danger:hover{{background:rgba(239,68,68,0.08);}}
         """)
 
         root = QHBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        # ── Sidebar ──────────────────────────────────────────────
-        sidebar = QFrame()
-        sidebar.setFixedWidth(200)
-        sidebar.setStyleSheet(f"""
-            QFrame {{
-                background: {BG_SIDEBAR};
-                border-right: 1px solid {BORDER};
-            }}
-        """)
-        sb = QVBoxLayout(sidebar)
-        sb.setContentsMargins(16, 24, 16, 24)
-        sb.setSpacing(4)
+        # Sidebar
+        sb = QFrame()
+        sb.setFixedWidth(180)
+        sb.setStyleSheet(f"background:{BG_SB};border-right:1px solid {BORDER};")
+        sbl = QVBoxLayout(sb)
+        sbl.setContentsMargins(14, 20, 14, 16)
+        sbl.setSpacing(2)
 
         logo = QLabel("GoodVoice")
-        logo.setFont(QFont(FONT, 18, QFont.Weight.Bold))
-        logo.setStyleSheet(f"color: {TEXT}; padding: 0 4px 16px 4px; border: none;")
-        sb.addWidget(logo)
+        logo.setFont(QFont(FONT, 16, QFont.Weight.Bold))
+        logo.setStyleSheet(f"color:{TEXT};padding:0 4px 12px 4px;border:none;")
+        sbl.addWidget(logo)
 
         self._nav = []
         for name in ["Основные", "Статистика", "История"]:
-            btn = SidebarBtn(name)
-            btn.clicked.connect(lambda checked, n=name: self._goto(n))
-            sb.addWidget(btn)
-            self._nav.append((name, btn))
+            b = NavBtn(name)
+            b.clicked.connect(lambda checked, n=name: self._goto(n))
+            sbl.addWidget(b)
+            self._nav.append((name, b))
+        sbl.addStretch()
 
-        sb.addStretch()
-        ver = QLabel("v1.0.0")
-        ver.setFont(QFont(FONT, 9))
-        ver.setStyleSheet(f"color: {TEXT_DIM}; padding: 0 4px; border: none;")
-        sb.addWidget(ver)
-
-        root.addWidget(sidebar)
-
-        # ── Content ──────────────────────────────────────────────
-        content = QFrame()
-        content.setStyleSheet(f"background: {BG}; border: none;")
-        cl = QVBoxLayout(content)
-        cl.setContentsMargins(36, 28, 36, 20)
-        cl.setSpacing(0)
+        # Content
+        ct = QFrame()
+        ct.setStyleSheet(f"background:{BG};border:none;")
+        ctl = QVBoxLayout(ct)
+        ctl.setContentsMargins(28, 22, 28, 16)
+        ctl.setSpacing(0)
 
         self._title = QLabel("Основные")
-        self._title.setFont(QFont(FONT, 24, QFont.Weight.Bold))
-        self._title.setStyleSheet(f"color: {TEXT}; border: none;")
-        cl.addWidget(self._title)
-
-        sub = QLabel("Настройки голосового ввода")
-        sub.setFont(QFont(FONT, 13))
-        sub.setStyleSheet(f"color: {TEXT_DIM}; border: none; margin-bottom: 24px;")
-        cl.addWidget(sub)
+        self._title.setFont(QFont(FONT, 20, QFont.Weight.Bold))
+        self._title.setStyleSheet(f"color:{TEXT};border:none;")
+        ctl.addWidget(self._title)
 
         self._stack = QStackedWidget()
-        self._stack.addWidget(self._page_general())
-        self._stack.addWidget(self._page_stats())
-        self._stack.addWidget(self._page_history())
-        cl.addWidget(self._stack, 1)
+        self._stack.addWidget(self._pg_general())
+        self._stack.addWidget(self._pg_stats())
+        self._stack.addWidget(self._pg_history())
+        ctl.addWidget(self._stack, 1)
 
-        # Footer
-        footer_line = QFrame()
-        footer_line.setFixedHeight(1)
-        footer_line.setStyleSheet(f"background: {BORDER}; border: none; margin: 8px 0;")
-        cl.addWidget(footer_line)
+        # Footer — fixed, no scroll
+        line = QFrame()
+        line.setFixedHeight(1)
+        line.setStyleSheet(f"background:{BORDER};border:none;margin:8px 0;")
+        ctl.addWidget(line)
+        fl = QHBoxLayout()
+        fl.setContentsMargins(0, 8, 0, 0)
+        fl.addStretch()
+        bc = QPushButton("Закрыть")
+        bc.clicked.connect(self.close)
+        fl.addWidget(bc)
+        bs = QPushButton("Сохранить")
+        bs.setObjectName("ok")
+        bs.clicked.connect(self._save)
+        fl.addWidget(bs)
+        ctl.addLayout(fl)
 
-        footer = QHBoxLayout()
-        footer.setContentsMargins(0, 12, 0, 0)
-        footer.addStretch()
-        btn_close = QPushButton("Закрыть")
-        btn_close.clicked.connect(self.close)
-        footer.addWidget(btn_close)
-        btn_save = QPushButton("Сохранить")
-        btn_save.setObjectName("primary")
-        btn_save.setFixedWidth(130)
-        btn_save.clicked.connect(self._save)
-        footer.addWidget(btn_save)
-        cl.addLayout(footer)
-
-        root.addWidget(content, 1)
+        root.addWidget(sb)
+        root.addWidget(ct, 1)
         self._goto("Основные")
 
-    def _goto(self, name: str):
+    def _goto(self, name):
         self._title.setText(name)
-        idx = {"Основные": 0, "Статистика": 1, "История": 2}[name]
-        self._stack.setCurrentIndex(idx)
-        for n, btn in self._nav:
-            btn.setChecked(n == name)
+        self._stack.setCurrentIndex({"Основные": 0, "Статистика": 1, "История": 2}[name])
+        for n, b in self._nav:
+            b.setChecked(n == name)
 
     # ── Pages ────────────────────────────────────────────────────
 
-    def _page_general(self):
-        s = QScrollArea()
-        s.setWidgetResizable(True)
-        s.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+    def _pg_general(self):
+        sa = QScrollArea()
+        sa.setWidgetResizable(True)
+        sa.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         c = QWidget()
         lay = QVBoxLayout(c)
-        lay.setContentsMargins(0, 0, 0, 0)
-        lay.setSpacing(14)
+        lay.setContentsMargins(0, 0, 8, 0)
+        lay.setSpacing(10)
 
-        # Hotkey
-        f = card_frame()
-        fl = QVBoxLayout(f)
-        fl.setContentsMargins(20, 16, 20, 16)
-        fl.setSpacing(10)
-        fl.addLayout(card_row_text("Горячая клавиша", "Комбинация для начала записи голоса"))
-        self.combo_hotkey = styled_combo(
-            ["Right Alt", "Right Ctrl", "Left Ctrl"],
-            "Right Alt" if self.settings.hotkey == "alt_r" else (
-                "Right Ctrl" if self.settings.hotkey == "ctrl_r" else "Left Ctrl"))
-        fl.addWidget(self.combo_hotkey)
-        lay.addWidget(f)
+        lang_map = {"auto": "Auto", "ru": "Russian", "en": "English",
+                     "de": "German", "fr": "French", "es": "Spanish"}
 
-        # Trigger
-        f = card_frame()
-        fl = QVBoxLayout(f)
-        fl.setContentsMargins(20, 16, 20, 16)
-        fl.setSpacing(10)
-        fl.addLayout(card_row_text("Режим записи", "Hold — зажал/говоришь/отпустил. Toggle — нажал/говоришь/нажал"))
-        self.combo_mode = styled_combo(
-            ["Зажатие (Hold)", "Переключение (Toggle)"],
-            "Зажатие (Hold)" if self.settings.trigger_mode == "hold" else "Переключение (Toggle)")
-        fl.addWidget(self.combo_mode)
-        lay.addWidget(f)
+        rows = [
+            ("Горячая клавиша", "Комбинация для начала записи",
+             combo(["Right Alt", "Right Ctrl", "Left Ctrl"],
+                   "Right Alt" if self.settings.hotkey == "alt_r" else
+                   ("Right Ctrl" if self.settings.hotkey == "ctrl_r" else "Left Ctrl"))),
+            ("Режим записи", "Hold — зажал/отпустил. Toggle — нажал/нажал",
+             combo(["Зажатие (Hold)", "Переключение (Toggle)"],
+                   "Зажатие (Hold)" if self.settings.trigger_mode == "hold" else "Переключение (Toggle)")),
+            ("Язык", "Язык распознавания речи",
+             combo(["Auto", "Russian", "English", "German", "French", "Spanish"],
+                   lang_map.get(self.settings.language, "Auto"))),
+            ("Тема HUD", "Визуальный стиль плавающего окна",
+             combo(["hybrid_v2", "google", "google_v2", "hybrid", "vercel"],
+                   self.settings.hud_theme)),
+        ]
 
-        # Language
-        f = card_frame()
-        fl = QVBoxLayout(f)
-        fl.setContentsMargins(20, 16, 20, 16)
-        fl.setSpacing(10)
-        fl.addLayout(card_row_text("Язык", "Язык распознавания речи"))
-        lang_map = {"auto": "Auto", "ru": "Russian", "en": "English", "de": "German", "fr": "French", "es": "Spanish"}
-        self.combo_lang = styled_combo(
-            ["Auto", "Russian", "English", "German", "French", "Spanish"],
-            lang_map.get(self.settings.language, "Auto"))
-        fl.addWidget(self.combo_lang)
-        lay.addWidget(f)
+        for title, desc, widget in rows:
+            f = card(64)
+            fl = QHBoxLayout(f)
+            fl.setContentsMargins(16, 0, 16, 0)
+            fl.setSpacing(12)
+            col = QVBoxLayout()
+            col.setSpacing(1)
+            t = QLabel(title)
+            t.setFont(QFont(FONT, 13, QFont.Weight.Medium))
+            t.setStyleSheet(f"color:{TEXT};background:transparent;border:none;")
+            col.addWidget(t)
+            d = QLabel(desc)
+            d.setFont(QFont(FONT, 10))
+            d.setStyleSheet(f"color:{TEXT3};background:transparent;border:none;")
+            col.addWidget(d)
+            fl.addLayout(col, 1)
+            fl.addWidget(widget)
+            lay.addWidget(f)
 
         # Punctuation
-        f = card_frame()
-        fl = QVBoxLayout(f)
-        fl.setContentsMargins(20, 16, 20, 16)
-        row = QHBoxLayout()
-        row.addLayout(card_row_text("Пунктуация", "Автоматически расставляет запятые и точки"))
-        row.addStretch()
-        self.check_punct = QCheckBox()
-        self.check_punct.setChecked(self.settings.punctuation)
-        row.addWidget(self.check_punct)
-        fl.addLayout(row)
-        lay.addWidget(f)
-
-        # Theme
-        f = card_frame()
-        fl = QVBoxLayout(f)
-        fl.setContentsMargins(20, 16, 20, 16)
-        fl.setSpacing(10)
-        fl.addLayout(card_row_text("Тема HUD", "Визуальный стиль плавающего окна"))
-        self.combo_theme = styled_combo(
-            ["hybrid_v2", "google", "google_v2", "hybrid", "vercel"],
-            self.settings.hud_theme)
-        fl.addWidget(self.combo_theme)
+        f = card(56)
+        fl = QHBoxLayout(f)
+        fl.setContentsMargins(16, 0, 16, 0)
+        t = QLabel("Пунктуация")
+        t.setFont(QFont(FONT, 13, QFont.Weight.Medium))
+        t.setStyleSheet(f"color:{TEXT};background:transparent;border:none;")
+        fl.addWidget(t, 1)
+        self.chk_p = QCheckBox()
+        self.chk_p.setChecked(self.settings.punctuation)
+        fl.addWidget(self.chk_p)
         lay.addWidget(f)
 
         lay.addStretch()
-        s.setWidget(c)
-        return s
+        sa.setWidget(c)
+        return sa
 
-    def _page_stats(self):
-        s = QScrollArea()
-        s.setWidgetResizable(True)
-        s.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+    def _pg_stats(self):
+        sa = QScrollArea()
+        sa.setWidgetResizable(True)
+        sa.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         c = QWidget()
         lay = QVBoxLayout(c)
-        lay.setContentsMargins(0, 0, 0, 0)
-        lay.setSpacing(20)
+        lay.setContentsMargins(0, 0, 8, 0)
+        lay.setSpacing(16)
 
         st = self.stats
-
-        # KPI row — all white values
         row = QHBoxLayout()
-        row.setSpacing(14)
-        row.addWidget(kpi_card(str(st.total_sessions), "Сессий"))
-        row.addWidget(kpi_card(f"{st.total_words:,}", "Слов"))
-        row.addWidget(kpi_card(f"{st.total_chars:,}", "Символов"))
-        row.addWidget(kpi_card(f"{st.avg_words:.0f}", "Слов / сессия"))
+        row.setSpacing(10)
+        row.addWidget(kpi(str(st.total_sessions), "Сессий"))
+        row.addWidget(kpi(f"{st.total_words:,}", "Слов"))
+        row.addWidget(kpi(f"{st.total_chars:,}", "Символов"))
+        row.addWidget(kpi(f"{st.avg_words:.0f}", "Слов/сессия"))
         lay.addLayout(row)
 
-        # Chart
         if st.sessions:
-            f = card_frame()
+            f = card(220)
             fl = QVBoxLayout(f)
-            fl.setContentsMargins(20, 16, 20, 16)
-            fl.setSpacing(8)
+            fl.setContentsMargins(16, 12, 16, 8)
+            fl.setSpacing(4)
             t = QLabel("Активность по дням")
-            t.setFont(QFont(FONT, 13, QFont.Weight.Medium))
-            t.setStyleSheet(f"color: {TEXT_MID}; background: transparent; border: none;")
+            t.setFont(QFont(FONT, 12, QFont.Weight.Medium))
+            t.setStyleSheet(f"color:{TEXT2};background:transparent;border:none;")
             fl.addWidget(t)
-
             daily = defaultdict(int)
-            for sess in st.sessions:
-                day = datetime.fromtimestamp(sess["timestamp"]).strftime("%d.%m")
-                daily[day] += sess.get("word_count", 0)
+            for s in st.sessions:
+                day = datetime.fromtimestamp(s["timestamp"]).strftime("%d.%m")
+                daily[day] += s.get("word_count", 0)
             days = sorted(daily.keys())[-14:]
-            data = [(d, daily[d]) for d in days]
-
-            chart = BarChart(data)
-            fl.addWidget(chart)
+            fl.addWidget(BarChart([(d, daily[d]) for d in days]))
             lay.addWidget(f)
-        else:
-            empty = QLabel("Пока нет данных")
-            empty.setFont(QFont(FONT, 13))
-            empty.setStyleSheet(f"color: {TEXT_DIM}; padding: 40px; border: none;")
-            empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            lay.addWidget(empty)
 
         lay.addStretch()
-        s.setWidget(c)
-        return s
+        sa.setWidget(c)
+        return sa
 
-    def _page_history(self):
-        s = QScrollArea()
-        s.setWidgetResizable(True)
-        s.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+    def _pg_history(self):
+        sa = QScrollArea()
+        sa.setWidgetResizable(True)
+        sa.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         c = QWidget()
         lay = QVBoxLayout(c)
-        lay.setContentsMargins(0, 0, 0, 0)
-        lay.setSpacing(8)
+        lay.setContentsMargins(0, 0, 8, 0)
+        lay.setSpacing(6)
 
         entries = self.history.get_recent(30)
         if not entries:
             empty = QLabel("История пуста")
-            empty.setFont(QFont(FONT, 13))
-            empty.setStyleSheet(f"color: {TEXT_DIM}; padding: 40px; border: none;")
+            empty.setFont(QFont(FONT, 12))
+            empty.setStyleSheet(f"color:{TEXT3};padding:32px;border:none;")
             empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
             lay.addWidget(empty)
         else:
             for entry in entries:
-                lay.addWidget(HistoryItem(entry))
-            lay.addSpacing(8)
+                lay.addWidget(HistoryRow(entry))
+            lay.addSpacing(6)
             btn = QPushButton("Очистить историю")
             btn.setObjectName("danger")
-            btn.clicked.connect(self._clear_history)
+            btn.clicked.connect(self._clear_hist)
             lay.addWidget(btn)
 
         lay.addStretch()
-        s.setWidget(c)
-        return s
+        sa.setWidget(c)
+        return sa
 
-    def _clear_history(self):
-        reply = QMessageBox.question(
-            self, "Очистка", "Удалить всю историю?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-        if reply == QMessageBox.StandardButton.Yes:
+    def _clear_hist(self):
+        if QMessageBox.question(self, "Очистка", "Удалить всю историю?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        ) == QMessageBox.StandardButton.Yes:
             self.history.clear()
             self._stack.removeWidget(self._stack.widget(2))
-            self._stack.insertWidget(2, self._page_history())
+            self._stack.insertWidget(2, self._pg_history())
             self._stack.setCurrentIndex(2)
 
     def _save(self):
-        hotkey_map = {"Right Alt": "alt_r", "Right Ctrl": "ctrl_r", "Left Ctrl": "ctrl_l"}
-        self.settings.hotkey = hotkey_map.get(self.combo_hotkey.currentText(), "alt_r")
-        self.settings.trigger_mode = "hold" if self.combo_mode.currentIndex() == 0 else "toggle"
-        lang_rev = {"Auto": "auto", "Russian": "ru", "English": "en", "German": "de", "French": "fr", "Spanish": "es"}
-        self.settings.language = lang_rev.get(self.combo_lang.currentText(), "auto")
-        self.settings.punctuation = self.check_punct.isChecked()
-        self.settings.hud_theme = self.combo_theme.currentText()
+        hm = {"Right Alt": "alt_r", "Right Ctrl": "ctrl_r", "Left Ctrl": "ctrl_l"}
+        self.settings.hotkey = hm.get(self.combo_hotkey.currentText() if hasattr(self, 'combo_hotkey') else "Right Alt", "alt_r")
+        # Find the actual combo widgets from the general page
+        page = self._stack.widget(0)
+        if page:
+            sa = page if isinstance(page, QScrollArea) else None
+            if sa:
+                container = sa.widget()
+                if container:
+                    layout = container.layout()
+                    # Get combos from layout children
+                    combos = []
+                    for i in range(layout.count()):
+                        item = layout.itemAt(i)
+                        if item and item.widget():
+                            fw = item.widget()
+                            for j in range(fw.layout().count()):
+                                sub = fw.layout().itemAt(j)
+                                if sub and hasattr(sub, 'widget') and sub.widget() and isinstance(sub.widget(), QComboBox):
+                                    combos.append(sub.widget())
+                    if len(combos) >= 4:
+                        self.settings.hotkey = hm.get(combos[0].currentText(), "alt_r")
+                        self.settings.trigger_mode = "hold" if combos[1].currentIndex() == 0 else "toggle"
+                        lr = {"Auto": "auto", "Russian": "ru", "English": "en",
+                              "German": "de", "French": "fr", "Spanish": "es"}
+                        self.settings.language = lr.get(combos[2].currentText(), "auto")
+                        self.settings.hud_theme = combos[3].currentText()
+        self.settings.punctuation = self.chk_p.isChecked()
         self.settings.save()
         self.close()
 
 
 def open_settings():
-    win = SettingsWindow()
-    win.show()
-    return win
+    w = SettingsWindow()
+    w.show()
+    return w
