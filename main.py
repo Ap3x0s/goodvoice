@@ -54,7 +54,7 @@ class GoodVoiceApp:
         self.tray.start()
         self._running = True
 
-        print("GoodVoice: готово! Нажмите Left Ctrl для записи.")
+        print("GoodVoice: готово! Нажмите Right Ctrl для записи.")
 
         try:
             self.hud.run()

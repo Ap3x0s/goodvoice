@@ -31,7 +31,7 @@ class HotkeyManager:
             self._listener = None
 
     def _on_press(self, key):
-        if key == keyboard.Key.ctrl_l:
+        if key == keyboard.Key.ctrl_r:
             if self.mode == TriggerMode.HOLD:
                 if not self._recording:
                     self._recording = True
@@ -53,7 +53,7 @@ class HotkeyManager:
                     self.on_cancel()
 
     def _on_release(self, key):
-        if key == keyboard.Key.ctrl_l and self.mode == TriggerMode.HOLD:
+        if key == keyboard.Key.ctrl_r and self.mode == TriggerMode.HOLD:
             if self._recording:
                 self._recording = False
                 if self.on_stop:

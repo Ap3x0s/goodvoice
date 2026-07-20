@@ -16,7 +16,7 @@ class Settings:
     punctuation: bool = True
     hud_position: str = "center"  # "center" or "cursor"
     autostart: bool = False
-    hotkey: str = "ctrl_l"
+    hotkey: str = "ctrl_r"
 
     def load(self) -> "Settings":
         """Load settings from JSON file, create with defaults if missing."""

@@ -11,10 +11,15 @@ class Transcriber:
         self._model = None
 
     def load_model(self) -> None:
+        import torch
+        if self.device == "auto":
+            self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        compute = "float16" if self.device == "cuda" else "int8"
+        print(f"Transcriber: device={self.device}, compute={compute}")
         self._model = WhisperModel(
             self.model_size,
             device=self.device,
-            compute_type="float16" if self.device != "cpu" else "int8",
+            compute_type=compute,
         )
 
     def transcribe(
