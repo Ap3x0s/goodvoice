@@ -77,9 +77,11 @@ class GoodVoiceApp:
     def _on_record_start(self):
         print("[REC] запись...")
         self.recorder.start()
+        lang_display = self.settings.language.upper() if self.settings.language != "auto" else "AUTO"
         QTimer.singleShot(0, lambda: (
             self.hud.set_state(HudState.RECORDING),
             self.hud.set_text(""),
+            self.hud.set_language(lang_display),
         ))
 
     def _on_record_stop(self):

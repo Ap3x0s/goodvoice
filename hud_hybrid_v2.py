@@ -1,7 +1,8 @@
-"""Hybrid v2 — Google v1 bars + shimmer, hybrid spring physics + glassmorphism."""
+"""Hybrid v2 — Google v1 bars + shimmer, hybrid spring + glass + RMS glow + timer + vol meter."""
 
 import sys
 import math
+import time
 from PyQt6.QtWidgets import QApplication, QWidget
 from PyQt6.QtCore import Qt, QTimer, QRectF, QPointF
 from PyQt6.QtGui import (
@@ -16,10 +17,14 @@ class Pal:
     TEXT_DIM     = QColor(108, 112, 134)
     TEXT_NORM    = QColor(205, 214, 244)
     ACCENT_PINK  = QColor(243, 139, 168)
+    ACCENT_MAG   = QColor(255, 100, 150)      # bright magenta for loud
     ACCENT_GREEN = QColor(166, 227, 161)
     SHIMMER_2    = QColor(203, 166, 247)
     GLASS_TOP    = QColor(255, 255, 255, 22)
     GLASS_INNER  = QColor(255, 255, 255, 6)
+    VOL_LOW      = QColor(166, 227, 161)      # green
+    VOL_MID      = QColor(249, 226, 175)      # yellow
+    VOL_HIGH     = QColor(243, 139, 168)      # pink/red
 
 
 class HudState:
@@ -50,9 +55,9 @@ class Spring:
 
 
 class HudWidget(QWidget):
-    """Hybrid v2: idle/success from hybrid, recording/thinking from google v1."""
+    """Hybrid v2: bars+shimmer from v1, spring+glass from hybrid, RMS glow, timer, vol meter."""
 
-    W = 360
+    W = 400
     H = 64
     CORNER_R = 32
 
@@ -66,6 +71,9 @@ class HudWidget(QWidget):
         self._text = ""
         self._success_flash = 0.0
         self._pulse_ring = 0.0
+        self._border_pulse = 0.0
+        self._rec_start = 0.0
+        self._language = "AUTO"
 
         self._spr_sc = Spring(0.12, 0.65)
         self._spr_sc.set(0.85); self._spr_sc.target = 0.85
@@ -103,6 +111,7 @@ class HudWidget(QWidget):
             self._text = ""
             self._spr_sc.target = 1.03
             self._spr_glow.target = 25.0
+            self._rec_start = time.time()
             self.show(); self.raise_()
         elif state == HudState.THINKING:
             self._text = ""
@@ -123,6 +132,9 @@ class HudWidget(QWidget):
     def set_text(self, text):
         self._text = text
 
+    def set_language(self, lang: str):
+        self._language = lang
+
     def _tick(self):
         self._spr_sc.update()
         self._spr_glow.update()
@@ -132,6 +144,7 @@ class HudWidget(QWidget):
 
         if self._state == HudState.RECORDING:
             self._phase += 0.08 + self._display_rms * 0.12
+            self._border_pulse += 0.08 + self._display_rms * 0.1
         elif self._state == HudState.THINKING:
             self._phase += 0.04
             self._shimmer_phase += 0.03
@@ -161,34 +174,46 @@ class HudWidget(QWidget):
         p.translate(-self.W / 2, -self.H / 2)
         p.setOpacity(min(1.0, max(0.0, (sc - 0.7) / 0.3)))
 
-        # ── Hybrid: glow + pulse + pill + glass ──
         self._draw_glow(p)
         self._draw_pulse_ring(p)
         self._draw_pill(p)
+        self._draw_pulsing_border(p)
         self._draw_glass(p)
 
-        # ── Phase-dependent content ──
         if self._state == HudState.RECORDING:
-            self._draw_bars(p)           # from google v1
+            self._draw_bars(p)
+            self._draw_vol_meter(p)
+            self._draw_timer(p)
+            self._draw_language(p)
         elif self._state == HudState.THINKING:
-            self._draw_shimmer(p)        # from google v1
+            self._draw_shimmer(p)
         elif self._state == HudState.SUCCESS:
-            self._draw_success(p)        # from hybrid
+            self._draw_success(p)
         elif self._state == HudState.IDLE:
-            self._draw_idle_breath(p)    # from hybrid
+            self._draw_idle_breath(p)
 
         self._draw_text(p)
         p.end()
 
-    # ── Hybrid layers (glow, pill, glass, idle, success) ─────────
+    # ── RMS → color glow ─────────────────────────────────────────
+
+    def _rms_color(self):
+        """Interpolate pink → magenta based on RMS."""
+        r = self._display_rms
+        red = int(243 + (255 - 243) * r)
+        green = int(139 - 139 * r * 0.6)
+        blue = int(168 - 30 * r)
+        return QColor(red, green, blue)
 
     def _draw_glow(self, p):
         gr = self._spr_glow.value
         if gr < 1:
             return
-        c = {HudState.RECORDING: Pal.ACCENT_PINK,
-             HudState.THINKING: Pal.SHIMMER_2,
-             HudState.SUCCESS: Pal.ACCENT_GREEN}.get(self._state, QColor(137, 180, 250))
+        c = self._rms_color() if self._state == HudState.RECORDING else {
+            HudState.THINKING: Pal.SHIMMER_2,
+            HudState.SUCCESS: Pal.ACCENT_GREEN,
+        }.get(self._state, QColor(137, 180, 250))
+
         g = QColor(c); g.setAlpha(int(25 + gr * 1.2))
         ctr = QPointF(self.W / 2, self.H / 2)
         grad = QRadialGradient(ctr, gr * 2.5)
@@ -204,6 +229,8 @@ class HudWidget(QWidget):
             p.setBrush(QBrush(g2))
             p.drawEllipse(ctr, gr * 0.8, gr * 0.8)
 
+    # ── Pulse ring ───────────────────────────────────────────────
+
     def _draw_pulse_ring(self, p):
         if self._pulse_ring <= 0:
             return
@@ -214,14 +241,36 @@ class HudWidget(QWidget):
         p.setBrush(Qt.BrushStyle.NoBrush)
         p.drawEllipse(QPointF(self.W / 2, self.H / 2), r, r)
 
+    # ── Pill ─────────────────────────────────────────────────────
+
     def _draw_pill(self, p):
         r = self.CORNER_R
         path = QPainterPath()
         path.addRoundedRect(QRectF(0, 0, self.W, self.H), r, r)
         bg = Pal.BG_REC if self._state == HudState.RECORDING else Pal.BG
         p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(bg)); p.drawPath(path)
+        # Static border
         p.setPen(QPen(QColor(255, 255, 255, 12), 1))
         p.setBrush(Qt.BrushStyle.NoBrush); p.drawPath(path)
+
+    # ── Pulsing border ───────────────────────────────────────────
+
+    def _draw_pulsing_border(self, p):
+        if self._state != HudState.RECORDING:
+            return
+        rms = self._display_rms
+        alpha = int(12 + rms * 40 + math.sin(self._border_pulse) * 8)
+        alpha = max(0, min(80, alpha))
+        color = self._rms_color()
+        color.setAlpha(alpha)
+        r = self.CORNER_R
+        path = QPainterPath()
+        path.addRoundedRect(QRectF(0.5, 0.5, self.W - 1, self.H - 1), r, r)
+        p.setPen(QPen(color, 1.5))
+        p.setBrush(Qt.BrushStyle.NoBrush)
+        p.drawPath(path)
+
+    # ── Glassmorphism ────────────────────────────────────────────
 
     def _draw_glass(self, p):
         r = self.CORNER_R
@@ -235,38 +284,9 @@ class HudWidget(QWidget):
         grad.setColorAt(1, QColor(255, 255, 255, 0))
         p.setBrush(QBrush(grad)); p.drawPath(inner)
 
-    def _draw_idle_breath(self, p):
-        b = 0.5 + 0.5 * math.sin(self._phase * 0.8)
-        a = int(8 + b * 10)
-        ctr = QPointF(self.W / 2, self.H / 2)
-        grad = QRadialGradient(ctr, 40)
-        grad.setColorAt(0, QColor(137, 180, 250, a))
-        grad.setColorAt(1, QColor(0, 0, 0, 0))
-        p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(grad))
-        p.drawEllipse(ctr, 40, 40)
-
-    def _draw_success(self, p):
-        if self._success_flash > 0:
-            a = int(50 * self._success_flash)
-            r = self.CORNER_R
-            path = QPainterPath()
-            path.addRoundedRect(QRectF(2, 2, self.W - 4, self.H - 4), r - 2, r - 2)
-            p.setPen(Qt.PenStyle.NoPen)
-            p.setBrush(QBrush(QColor(166, 227, 161, a)))
-            p.drawPath(path)
-        cx, cy = self.W / 2, self.H / 2
-        s = 12
-        p.setPen(QPen(Pal.ACCENT_GREEN, 2.5, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
-        path = QPainterPath()
-        path.moveTo(cx - s * 0.6, cy)
-        path.lineTo(cx - s * 0.1, cy + s * 0.5)
-        path.lineTo(cx + s * 0.7, cy - s * 0.4)
-        p.setBrush(Qt.BrushStyle.NoBrush); p.drawPath(path)
-
-    # ── Google v1 layers (bars, shimmer) ─────────────────────────
+    # ── Bars (recording) ─────────────────────────────────────────
 
     def _draw_bars(self, p):
-        """V1 equalizer bars — reactive to RMS."""
         rms = self._display_rms
         n = 7
         bw, gap = 4, 5
@@ -288,10 +308,12 @@ class HudWidget(QWidget):
             x1 = sx + i * (bw + gap)
             y1 = by - bh
 
+            # RMS → color
             intensity = h
-            r = int(243 * intensity + 166 * (1 - intensity))
-            g = int(139 * intensity + 139 * (1 - intensity))
-            b = int(248 * intensity + 229 * (1 - intensity))
+            base = self._rms_color()
+            r = min(255, base.red() + int(intensity * 20))
+            g = min(255, base.green() + int(intensity * 20))
+            b = min(255, base.blue() + int(intensity * 20))
             a = int(180 + 75 * intensity)
 
             p.setPen(Qt.PenStyle.NoPen)
@@ -300,24 +322,82 @@ class HudWidget(QWidget):
             bar.addRoundedRect(QRectF(x1, y1, bw, bh), 2, 2)
             p.drawPath(bar)
 
-    def _draw_shimmer(self, p):
-        """V1 shimmer gradient + orbiting dots."""
-        t = self._shimmer_phase
+    # ── Volume meter (right side) ────────────────────────────────
 
+    def _draw_vol_meter(self, p):
+        rms = self._display_rms
+        mx = self.W - 40
+        mw = 6
+        mh = 36
+        my = (self.H - mh) / 2
+
+        # Background
+        bg = QPainterPath()
+        bg.addRoundedRect(QRectF(mx, my, mw, mh), 3, 3)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QBrush(QColor(255, 255, 255, 10)))
+        p.drawPath(bg)
+
+        # Fill level
+        fill_h = max(3, rms * mh)
+        fill_y = my + mh - fill_h
+
+        # Color: green → yellow → pink
+        if rms < 0.4:
+            c = Pal.VOL_LOW
+        elif rms < 0.7:
+            t = (rms - 0.4) / 0.3
+            c = QColor(
+                int(Pal.VOL_LOW.red() + (Pal.VOL_MID.red() - Pal.VOL_LOW.red()) * t),
+                int(Pal.VOL_LOW.green() + (Pal.VOL_MID.green() - Pal.VOL_LOW.green()) * t),
+                int(Pal.VOL_LOW.blue() + (Pal.VOL_MID.blue() - Pal.VOL_LOW.blue()) * t),
+            )
+        else:
+            t = (rms - 0.7) / 0.3
+            c = QColor(
+                int(Pal.VOL_MID.red() + (Pal.VOL_HIGH.red() - Pal.VOL_MID.red()) * t),
+                int(Pal.VOL_MID.green() + (Pal.VOL_HIGH.green() - Pal.VOL_MID.green()) * t),
+                int(Pal.VOL_MID.blue() + (Pal.VOL_HIGH.blue() - Pal.VOL_MID.blue()) * t),
+            )
+
+        fill = QPainterPath()
+        fill.addRoundedRect(QRectF(mx, fill_y, mw, fill_h), 3, 3)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QBrush(c))
+        p.drawPath(fill)
+
+    # ── Timer (right side) ───────────────────────────────────────
+
+    def _draw_timer(self, p):
+        elapsed = time.time() - self._rec_start
+        mins = int(elapsed) // 60
+        secs = int(elapsed) % 60
+        text = f"{mins}:{secs:02d}"
+        p.setFont(QFont("Consolas", 10))
+        p.setPen(QColor(255, 255, 255, 120))
+        p.drawText(QRectF(self.W - 80, 0, 40, self.H), Qt.AlignmentFlag.AlignCenter, text)
+
+    # ── Language indicator (right side) ──────────────────────────
+
+    def _draw_language(self, p):
+        p.setFont(QFont("Consolas", 9))
+        p.setPen(QColor(255, 255, 255, 80))
+        p.drawText(QRectF(self.W - 80, self.H - 18, 40, 14), Qt.AlignmentFlag.AlignCenter, self._language)
+
+    # ── Shimmer (thinking) ───────────────────────────────────────
+
+    def _draw_shimmer(self, p):
+        t = self._shimmer_phase
         center = QPointF(self.W / 2, self.H / 2)
         grad = QConicalGradient(center, t * 360)
         grad.setColorAt(0.0, QColor(137, 180, 250, 30))
         grad.setColorAt(0.3, QColor(203, 166, 247, 40))
         grad.setColorAt(0.6, QColor(243, 139, 168, 30))
         grad.setColorAt(1.0, QColor(137, 180, 250, 30))
-
         r = self.CORNER_R
         path = QPainterPath()
         path.addRoundedRect(QRectF(4, 4, self.W - 8, self.H - 8), r - 4, r - 4)
-        p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(QBrush(grad))
-        p.drawPath(path)
-
+        p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(grad)); p.drawPath(path)
         for i in range(3):
             dt = (t * 2 + i * 0.33) % 1.0
             x = self.W / 2 + math.cos(dt * math.pi * 2) * 30
@@ -327,6 +407,38 @@ class HudWidget(QWidget):
             p.setPen(Qt.PenStyle.NoPen)
             p.setBrush(QBrush(QColor(203, 166, 247, a)))
             p.drawEllipse(QPointF(x, y), dr, dr)
+
+    # ── Idle breath ──────────────────────────────────────────────
+
+    def _draw_idle_breath(self, p):
+        b = 0.5 + 0.5 * math.sin(self._phase * 0.8)
+        a = int(8 + b * 10)
+        ctr = QPointF(self.W / 2, self.H / 2)
+        grad = QRadialGradient(ctr, 40)
+        grad.setColorAt(0, QColor(137, 180, 250, a))
+        grad.setColorAt(1, QColor(0, 0, 0, 0))
+        p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(grad))
+        p.drawEllipse(ctr, 40, 40)
+
+    # ── Success ──────────────────────────────────────────────────
+
+    def _draw_success(self, p):
+        if self._success_flash > 0:
+            a = int(50 * self._success_flash)
+            r = self.CORNER_R
+            path = QPainterPath()
+            path.addRoundedRect(QRectF(2, 2, self.W - 4, self.H - 4), r - 2, r - 2)
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(QBrush(QColor(166, 227, 161, a)))
+            p.drawPath(path)
+        cx, cy = self.W / 2, self.H / 2
+        s = 12
+        p.setPen(QPen(Pal.ACCENT_GREEN, 2.5, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+        path = QPainterPath()
+        path.moveTo(cx - s * 0.6, cy)
+        path.lineTo(cx - s * 0.1, cy + s * 0.5)
+        path.lineTo(cx + s * 0.7, cy - s * 0.4)
+        p.setBrush(Qt.BrushStyle.NoBrush); p.drawPath(path)
 
     # ── Text ─────────────────────────────────────────────────────
 
