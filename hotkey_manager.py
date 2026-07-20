@@ -14,9 +14,11 @@ class HotkeyManager:
         self.mode = mode
         self._listener = None
         self._recording = False
+        self._ctrl_r_held = False
         self.on_start = None
         self.on_stop = None
         self.on_cancel = None
+        self.on_settings = None  # callback for Ctrl+P
 
     def start(self) -> None:
         self._listener = keyboard.Listener(
@@ -32,6 +34,7 @@ class HotkeyManager:
 
     def _on_press(self, key):
         if key == keyboard.Key.ctrl_r:
+            self._ctrl_r_held = True
             if self.mode == TriggerMode.HOLD:
                 if not self._recording:
                     self._recording = True
@@ -46,6 +49,9 @@ class HotkeyManager:
                     self._recording = True
                     if self.on_start:
                         self.on_start()
+        elif hasattr(key, 'char') and key.char == 'p' and self._ctrl_r_held:
+            if self.on_settings:
+                self.on_settings()
         elif key == keyboard.Key.esc:
             if self._recording:
                 self._recording = False
@@ -53,11 +59,13 @@ class HotkeyManager:
                     self.on_cancel()
 
     def _on_release(self, key):
-        if key == keyboard.Key.ctrl_r and self.mode == TriggerMode.HOLD:
-            if self._recording:
-                self._recording = False
-                if self.on_stop:
-                    self.on_stop()
+        if key == keyboard.Key.ctrl_r:
+            self._ctrl_r_held = False
+            if self.mode == TriggerMode.HOLD:
+                if self._recording:
+                    self._recording = False
+                    if self.on_stop:
+                        self.on_stop()
 
     @property
     def is_recording(self) -> bool:

@@ -88,11 +88,12 @@ class GoodVoiceApp:
         self.hotkey.on_start = self._on_record_start
         self.hotkey.on_stop = self._on_record_stop
         self.hotkey.on_cancel = self._on_record_cancel
+        self.hotkey.on_settings = lambda: QTimer.singleShot(0, self._open_settings)
 
         self.tray.on_show = lambda: self._cmd("show")
         self.tray.on_hide = lambda: self._cmd("hide")
-        self.tray.on_settings = self._open_settings
-        self.tray.on_quit = self._quit
+        self.tray.on_settings = lambda: QTimer.singleShot(0, self._open_settings)
+        self.tray.on_quit = lambda: QTimer.singleShot(0, self._quit)
 
         self.hotkey.start()
         self.tray.start()
@@ -173,8 +174,10 @@ class GoodVoiceApp:
 
     def _open_settings(self):
         from settings_window import SettingsWindow
-        self._settings_win = SettingsWindow()
+        if not hasattr(self, '_settings_win') or self._settings_win is None:
+            self._settings_win = SettingsWindow()
         self._settings_win.show()
+        self._settings_win.activateWindow()
 
     def _quit(self):
         self._running = False
