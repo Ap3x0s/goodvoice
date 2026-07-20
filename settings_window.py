@@ -121,7 +121,11 @@ class Switch(QWidget):
         p.drawRoundedRect(QRectF(0, 0, 44, 24), 12, 12)
 
         # Border
-        bc = QColor(A2, 60) if self._on else QColor(255, 255, 255, 20)
+        if self._on:
+            bc = QColor(A2)
+            bc.setAlpha(60)
+        else:
+            bc = QColor(255, 255, 255, 20)
         p.setPen(QPen(bc, 1))
         p.setBrush(Qt.BrushStyle.NoBrush)
         p.drawRoundedRect(QRectF(0, 0, 44, 24), 12, 12)
@@ -311,8 +315,8 @@ class Row(QWidget):
         # Word chip
         chip = f"{self._wc} \u0441\u043b\u043e\u0432"
         cr = QRectF(w - 100, 14, 70, 24)
-        p.setPen(QPen(QColor(A1, 50), 1))
-        p.setBrush(QBrush(QColor(A1, 12)))
+        p.setPen(QPen(QColor(124, 58, 237, 50), 1))
+        p.setBrush(QBrush(QColor(124, 58, 237, 12)))
         p.drawRoundedRect(cr, 10, 10)
         p.setPen(QColor(A2))
         p.setFont(QFont(FN, 9))
@@ -348,7 +352,7 @@ class KPI(QWidget):
 
         # Subtle gradient overlay
         glow = QRadialGradient(QPointF(w * 0.2, 0), w * 0.6)
-        glow.setColorAt(0, QColor(A1, 15))
+        glow.setColorAt(0, QColor(124, 58, 237, 15))
         glow.setColorAt(1, QColor(0, 0, 0, 0))
         p.setPen(Qt.PenStyle.NoPen)
         p.setBrush(QBrush(glow))
