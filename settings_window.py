@@ -1,6 +1,6 @@
-"""GoodVoice Settings — Neo-Glassmorphism + Neon Glow UI."""
+"""GoodVoice Settings — clean, professional, accessible UI."""
 
-import sys, math
+import sys
 from datetime import datetime, timedelta
 from collections import defaultdict
 from PyQt6.QtWidgets import (
@@ -8,10 +8,10 @@ from PyQt6.QtWidgets import (
     QPushButton, QMessageBox, QApplication, QFrame,
     QStackedWidget, QScrollArea, QSizePolicy, QToolTip
 )
-from PyQt6.QtCore import Qt, QTimer, QPoint, QRectF, QPointF
+from PyQt6.QtCore import Qt, QTimer, QRectF, QPointF
 from PyQt6.QtGui import (
     QFont, QColor, QPainter, QLinearGradient, QPen, QBrush,
-    QRadialGradient, QPainterPath, QConicalGradient
+    QRadialGradient, QPainterPath
 )
 
 from settings import Settings
@@ -19,132 +19,56 @@ from stats import Stats
 from history import History
 
 
-# ── Tokens ───────────────────────────────────────────────────────
+# ── Design Tokens ────────────────────────────────────────────────
 
-BG       = "#08080C"
-BG_SB    = "#0C0C12"
+BG       = "#0A0A0F"
+BG_SB    = "#0E0E14"
+BG_CARD  = "rgba(255,255,255,0.03)"
+BD       = "rgba(255,255,255,0.07)"
+BD_H     = "rgba(99,102,241,0.35)"
 C1       = "#FFFFFF"
-C2       = "#94A3B8"
-C3       = "#64748B"
+C2       = "#A0AEC0"
+C3       = "#5A6577"
 AC       = "#6366F1"
 AC_L     = "#818CF8"
-AC_D     = "#4F46E5"
 RED      = "#EF4444"
 F        = "Segoe UI"
 FM       = "Consolas"
+R        = 12
 
 
-# ── Glass card with glow ─────────────────────────────────────────
+# ── Helpers ──────────────────────────────────────────────────────
 
-class GlassCard(QFrame):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self._glow = 0.0
-        self._target_glow = 0.0
-        self.setStyleSheet("background:transparent;border:none;")
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setMinimumHeight(64)
-
-    def enterEvent(self, e):
-        self._target_glow = 1.0
-
-    def leaveEvent(self, e):
-        self._target_glow = 0.0
-
-    def paintEvent(self, e):
-        self._glow += (self._target_glow - self._glow) * 0.15
-        p = QPainter(self)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        w, h = self.width(), self.height()
-        r = 16
-
-        # Background glass
-        path = QPainterPath()
-        path.addRoundedRect(QRectF(0, 0, w, h), r, r)
-        glass = QColor(255, 255, 255, int(3 + self._glow * 5))
-        p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(QBrush(glass))
-        p.drawPath(path)
-
-        # Border
-        border_alpha = int(20 + self._glow * 40)
-        border_color = QColor(99, 102, 241, border_alpha) if self._glow > 0.01 else QColor(255, 255, 255, 20)
-        p.setPen(QPen(border_color, 1))
-        p.setBrush(Qt.BrushStyle.NoBrush)
-        p.drawPath(path)
-
-        # Glow effect
-        if self._glow > 0.01:
-            glow = QRadialGradient(QPointF(w / 2, 0), w * 0.6)
-            glow.setColorAt(0, QColor(99, 102, 241, int(15 * self._glow)))
-            glow.setColorAt(1, QColor(0, 0, 0, 0))
-            p.setPen(Qt.PenStyle.NoPen)
-            p.setBrush(QBrush(glow))
-            p.drawEllipse(QPointF(w / 2, 0), w * 0.6, h * 0.8)
-
-        p.end()
-        if abs(self._glow - self._target_glow) > 0.001:
-            self.update()
+def card():
+    f = QFrame()
+    f.setStyleSheet(f"""
+        QFrame {{
+            background: {BG_CARD};
+            border: 1px solid {BD};
+            border-radius: {R}px;
+        }}
+    """)
+    return f
 
 
-# ── Neon toggle switch ───────────────────────────────────────────
-
-class NeonToggle(QWidget):
-    toggled = lambda self: None
-
-    def __init__(self, checked=False, parent=None):
-        super().__init__(parent)
-        self._checked = checked
-        self._pos = 1.0 if checked else 0.0
-        self.setFixedSize(52, 28)
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
-
-    def isChecked(self):
-        return self._checked
-
-    def setChecked(self, v):
-        self._checked = v
-        self.update()
-
-    def mousePressEvent(self, e):
-        self._checked = not self._checked
-        self.update()
-
-    def paintEvent(self, e):
-        target = 1.0 if self._checked else 0.0
-        self._pos += (target - self._pos) * 0.2
-
-        p = QPainter(self)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        # Track
-        track_color = QColor(AC) if self._checked else QColor(42, 42, 56)
-        p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(QBrush(track_color))
-        p.drawRoundedRect(QRectF(0, 0, 52, 28), 14, 14)
-
-        # Glow when on
-        if self._checked:
-            glow = QRadialGradient(QPointF(26, 14), 30)
-            glow.setColorAt(0, QColor(99, 102, 241, 40))
-            glow.setColorAt(1, QColor(0, 0, 0, 0))
-            p.setBrush(QBrush(glow))
-            p.drawEllipse(QPointF(26, 14), 30, 30)
-
-        # Thumb
-        thumb_x = 4 + self._pos * 24
-        thumb_color = QColor(255, 255, 255)
-        p.setBrush(QBrush(thumb_color))
-        p.drawEllipse(QPointF(thumb_x + 10, 14), 9, 9)
-
-        p.end()
-        if abs(self._pos - target) > 0.01:
-            self.update()
+def kpi(val, lbl):
+    f = card()
+    f.setFixedHeight(96)
+    l = QVBoxLayout(f)
+    l.setContentsMargins(20, 12, 20, 12)
+    l.setSpacing(2)
+    v = QLabel(val)
+    v.setFont(QFont(FM, 26, QFont.Weight.Bold))
+    v.setStyleSheet(f"color:{C1};background:transparent;border:none;")
+    l.addWidget(v)
+    t = QLabel(lbl)
+    t.setFont(QFont(F, 12))
+    t.setStyleSheet(f"color:{C2};background:transparent;border:none;")
+    l.addWidget(t)
+    return f
 
 
-# ── Combo ────────────────────────────────────────────────────────
-
-def cmb(items, cur=None):
+def combo(items, cur=None):
     c = QComboBox()
     c.addItems(items)
     if cur and cur in items:
@@ -154,12 +78,51 @@ def cmb(items, cur=None):
     return c
 
 
-# ── Sidebar button ───────────────────────────────────────────────
+# ── Neon Toggle ──────────────────────────────────────────────────
+
+class Toggle(QWidget):
+    def __init__(self, checked=False):
+        super().__init__()
+        self._on = checked
+        self._pos = 1.0 if checked else 0.0
+        self.setFixedSize(48, 26)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+    def isChecked(self):
+        return self._on
+
+    def mousePressEvent(self, e):
+        self._on = not self._on
+        self.update()
+
+    def paintEvent(self, e):
+        target = 1.0 if self._on else 0.0
+        self._pos += (target - self._pos) * 0.25
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        # Track
+        track = QColor(AC) if self._on else QColor(35, 35, 48)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QBrush(track))
+        p.drawRoundedRect(QRectF(0, 0, 48, 26), 13, 13)
+
+        # Thumb
+        x = 4 + self._pos * 20
+        p.setBrush(QBrush(QColor(255, 255, 255)))
+        p.drawEllipse(QPointF(x + 9, 13), 8, 8)
+
+        p.end()
+        if abs(self._pos - target) > 0.01:
+            self.update()
+
+
+# ── Sidebar Nav ──────────────────────────────────────────────────
 
 class Nav(QPushButton):
     def __init__(self, icon, text):
         super().__init__(f"  {icon}  {text}")
-        self.setFixedHeight(40)
+        self.setFixedHeight(38)
         self.setCheckable(True)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setStyleSheet(f"""
@@ -168,8 +131,8 @@ class Nav(QPushButton):
                 color: {C3};
                 border: none;
                 border-left: 3px solid transparent;
-                border-radius: 0 10px 10px 0;
-                padding: 0 16px;
+                border-radius: 0 8px 8px 0;
+                padding: 0 14px;
                 text-align: left;
                 font-size: 13px;
                 font-family: {F};
@@ -179,7 +142,7 @@ class Nav(QPushButton):
                 color: {C2};
             }}
             QPushButton:checked {{
-                background: rgba(99,102,241,0.12);
+                background: rgba(99,102,241,0.10);
                 color: {C1};
                 font-weight: 600;
                 border-left: 3px solid {AC};
@@ -189,11 +152,11 @@ class Nav(QPushButton):
 
 # ── Chart ────────────────────────────────────────────────────────
 
-class FluidChart(QWidget):
+class Chart(QWidget):
     def __init__(self, data):
         super().__init__()
         self.data = data
-        self.setMinimumHeight(200)
+        self.setMinimumHeight(180)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._hover = -1
         self.setMouseTracking(True)
@@ -204,8 +167,8 @@ class FluidChart(QWidget):
             self._hover = idx
             self.update()
             if 0 <= idx < len(self.data):
-                lbl, val, date = self.data[idx]
-                QToolTip.showText(e.globalPos(), f"{date}: {val} слов", self)
+                lbl, val, dt = self.data[idx]
+                QToolTip.showText(e.globalPos(), f"{dt}: {val} слов", self)
             else:
                 QToolTip.hideText()
 
@@ -215,14 +178,12 @@ class FluidChart(QWidget):
         QToolTip.hideText()
 
     def _hit(self, pos):
-        w, h = self.width(), self.height()
-        ml, mr, mt, mb = 8, 8, 16, 32
-        cw = w - ml - mr
+        w = self.width()
         n = len(self.data)
-        bw = max(14, min(22, (cw - (n - 1) * 5) // n))
+        bw = max(14, min(20, (w - 40 - (n - 1) * 5) // n))
         gap = 5
         total = n * bw + (n - 1) * gap
-        sx = ml + (cw - total) // 2
+        sx = 20 + (w - 40 - total) // 2
         for i in range(n):
             x = sx + i * (bw + gap)
             if x <= pos.x() <= x + bw:
@@ -235,200 +196,122 @@ class FluidChart(QWidget):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         w, h = self.width(), self.height()
-        ml, mr, mt, mb = 8, 8, 16, 32
-        cw, ch = w - ml - mr, h - mt - mb
+        mt, mb = 12, 28
+        ch = h - mt - mb
         mx = max(v for _, v, _ in self.data) or 1
 
         # Grid
-        pen = QPen(QColor(255, 255, 255, 6), 1, Qt.PenStyle.DotLine)
-        p.setPen(pen)
-        for i in range(1, 5):
-            gy = mt + int(ch * i / 5)
-            p.drawLine(ml, gy, w - mr, gy)
+        p.setPen(QPen(QColor(255, 255, 255, 6), 1, Qt.PenStyle.DotLine))
+        for i in range(1, 4):
+            gy = mt + int(ch * i / 4)
+            p.drawLine(20, gy, w - 20, gy)
 
         n = len(self.data)
-        bw = max(14, min(22, (cw - (n - 1) * 5) // n))
+        bw = max(14, min(20, (w - 40 - (n - 1) * 5) // n))
         gap = 5
         total = n * bw + (n - 1) * gap
-        sx = ml + (cw - total) // 2
+        sx = 20 + (w - 40 - total) // 2
 
         for i, (lbl, val, _) in enumerate(self.data):
             x = sx + i * (bw + gap)
-            is_hv = (i == self._hover)
+            hv = (i == self._hover)
 
             if val == 0:
-                bh = 4
-                y = mt + ch - bh
                 p.setPen(Qt.PenStyle.NoPen)
-                p.setBrush(QBrush(QColor(255, 255, 255, 10)))
-                p.drawRoundedRect(x, y, bw, bh, 2, 2)
+                p.setBrush(QBrush(QColor(255, 255, 255, 8)))
+                p.drawRoundedRect(x, mt + ch - 3, bw, 3, 1, 1)
             else:
-                bh = max(8, int((val / mx) * ch))
+                bh = max(6, int((val / mx) * ch))
                 y = mt + ch - bh
-
-                # Glow under bar
-                if is_hv:
-                    glow = QRadialGradient(QPointF(x + bw / 2, y + bh / 2), bh * 0.8)
-                    glow.setColorAt(0, QColor(99, 102, 241, 50))
-                    glow.setColorAt(1, QColor(0, 0, 0, 0))
-                    p.setPen(Qt.PenStyle.NoPen)
-                    p.setBrush(QBrush(glow))
-                    p.drawEllipse(QPointF(x + bw / 2, y + bh / 2), bh * 0.8, bh * 0.8)
-
-                # Bar gradient
                 g = QLinearGradient(x, y, x, y + bh)
-                c_top = QColor(AC_L) if is_hv else QColor(AC)
-                g.setColorAt(0, c_top)
-                g.setColorAt(1, QColor(AC_D))
+                g.setColorAt(0, QColor(AC_L if hv else AC))
+                g.setColorAt(1, QColor("#4F46E5"))
                 p.setPen(Qt.PenStyle.NoPen)
                 p.setBrush(QBrush(g))
-                p.drawRoundedRect(x, y, bw, bh, 4, 4)
+                p.drawRoundedRect(x, y, bw, bh, 3, 3)
 
-            # Label
             p.setPen(QColor(C3))
             p.setFont(QFont(F, 9))
-            p.drawText(x, h - 22, bw, 18, Qt.AlignmentFlag.AlignCenter, lbl)
+            p.drawText(x, h - 18, bw, 16, Qt.AlignmentFlag.AlignCenter, lbl)
 
         p.end()
 
 
-# ── History row ──────────────────────────────────────────────────
+# ── History Row ──────────────────────────────────────────────────
 
-class HRow(QWidget):
+class Row(QWidget):
     def __init__(self, entry):
         super().__init__()
         self._text = entry["text"]
         self._ts = entry["timestamp"]
-        self._word_count = entry.get("word_count", len(self._text.split()))
+        self._words = entry.get("word_count", len(self._text.split()))
         self._glow = 0.0
-        self._target = 0.0
-        self.setFixedHeight(56)
+        self._tgt = 0.0
+        self.setFixedHeight(52)
         self.setMouseTracking(True)
 
     def enterEvent(self, e):
-        self._target = 1.0
+        self._tgt = 1.0
         self.update()
 
     def leaveEvent(self, e):
-        self._target = 0.0
+        self._tgt = 0.0
         self.update()
 
+    def mousePressEvent(self, e):
+        QApplication.clipboard().setText(self._text)
+
     def paintEvent(self, e):
-        self._glow += (self._target - self._glow) * 0.2
+        self._glow += (self._tgt - self._glow) * 0.2
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         w, h = self.width(), self.height()
-        r = 12
 
-        # Glass bg
+        # BG
         path = QPainterPath()
-        path.addRoundedRect(QRectF(0, 0, w, h), r, r)
-        a = int(3 + self._glow * 8)
+        path.addRoundedRect(QRectF(0, 0, w, h), 10, 10)
         p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(QBrush(QColor(255, 255, 255, a)))
+        p.setBrush(QBrush(QColor(255, 255, 255, int(2 + self._glow * 6))))
         p.drawPath(path)
 
         # Border
-        ba = int(18 + self._glow * 30)
-        bc = QColor(99, 102, 241, ba) if self._glow > 0.01 else QColor(255, 255, 255, 18)
+        ba = int(16 + self._glow * 25)
+        bc = QColor(99, 102, 241, ba) if self._glow > 0.01 else QColor(255, 255, 255, 14)
         p.setPen(QPen(bc, 1))
         p.setBrush(Qt.BrushStyle.NoBrush)
         p.drawPath(path)
 
-        # Glow
-        if self._glow > 0.01:
-            glow = QRadialGradient(QPointF(w / 2, h / 2), w * 0.5)
-            glow.setColorAt(0, QColor(99, 102, 241, int(8 * self._glow)))
-            glow.setColorAt(1, QColor(0, 0, 0, 0))
-            p.setPen(Qt.PenStyle.NoPen)
-            p.setBrush(QBrush(glow))
-            p.drawEllipse(QPointF(w / 2, h / 2), w * 0.5, h)
-
-        # Time pill
-        ts = datetime.fromtimestamp(self._entry_ts()).strftime("%H:%M") if hasattr(self, '_ts') else "00:00"
+        # Time
+        ts = datetime.fromtimestamp(self._ts).strftime("%H:%M")
         p.setPen(QColor(C3))
         p.setFont(QFont(FM, 10))
-        p.drawRoundedRect(QRectF(16, 14, 52, 28), 8, 8)
+        p.drawRoundedRect(QRectF(14, 13, 50, 26), 7, 7)
         p.setPen(QColor("#A0A0C0"))
-        p.drawText(QRectF(16, 14, 52, 28), Qt.AlignmentFlag.AlignCenter, ts)
+        p.drawText(QRectF(14, 13, 50, 26), Qt.AlignmentFlag.AlignCenter, ts)
 
         # Text
         txt = self._text[:80] + ("..." if len(self._text) > 80 else "")
         p.setPen(QColor(C2))
         p.setFont(QFont(F, 13))
-        p.drawText(QRectF(80, 10, w - 200, 36), Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, txt)
+        p.drawText(QRectF(74, 10, w - 180, 32),
+                   Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, txt)
 
-        # Word chip
-        chip = f"{len(self._text.split())} слов"
-        p.setPen(QColor(AC))
-        p.setFont(QFont(F, 10))
-        cr = QRectF(w - 120, 15, 72, 26)
-        p.setBrush(QBrush(QColor(99, 102, 241, 15)))
+        # Chip
+        chip = f"{self._words} слов"
+        cr = QRectF(w - 110, 14, 72, 24)
         p.setPen(QPen(QColor(99, 102, 241, 50), 1))
+        p.setBrush(QBrush(QColor(99, 102, 241, 12)))
         p.drawRoundedRect(cr, 10, 10)
+        p.setPen(QColor(AC))
+        p.setFont(QFont(F, 9))
         p.drawText(cr, Qt.AlignmentFlag.AlignCenter, chip)
 
         p.end()
-
-    def _entry_ts(self):
-        return 0
-
-    def set_entry(self, entry):
-        self._ts = entry["timestamp"]
-        self._text = entry["text"]
-        self._word_count = entry.get("word_count", len(self._text.split()))
+        if abs(self._glow - self._tgt) > 0.005:
+            self.update()
 
 
-# ── KPI card with neon glow ──────────────────────────────────────
-
-class NeonKPI(QFrame):
-    def __init__(self, val, lbl):
-        super().__init__()
-        self._val = val
-        self._lbl = lbl
-        self.setMinimumHeight(96)
-        self.setStyleSheet("background:transparent;border:none;")
-
-    def paintEvent(self, e):
-        p = QPainter(self)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        w, h = self.width(), self.height()
-        r = 16
-
-        # Glass bg
-        path = QPainterPath()
-        path.addRoundedRect(QRectF(0, 0, w, h), r, r)
-        p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(QBrush(QColor(255, 255, 255, 3)))
-        p.drawPath(path)
-
-        # Border
-        p.setPen(QPen(QColor(255, 255, 255, 18), 1))
-        p.setBrush(Qt.BrushStyle.NoBrush)
-        p.drawPath(path)
-
-        # Neon glow at top
-        glow = QRadialGradient(QPointF(w / 2, 0), w * 0.5)
-        glow.setColorAt(0, QColor(99, 102, 241, 12))
-        glow.setColorAt(1, QColor(0, 0, 0, 0))
-        p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(QBrush(glow))
-        p.drawEllipse(QPointF(w / 2, 0), w * 0.5, h * 0.6)
-
-        # Value — gradient text effect (white to light purple)
-        p.setFont(QFont(FM, 28, QFont.Weight.Bold))
-        p.setPen(QColor(C1))
-        p.drawText(QRectF(20, 14, w - 40, 40), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, self._val)
-
-        # Label
-        p.setFont(QFont(F, 12))
-        p.setPen(QColor(C2))
-        p.drawText(QRectF(20, 54, w - 40, 30), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop, self._lbl)
-
-        p.end()
-
-
-# ── Main Window ──────────────────────────────────────────────────
+# ── Window ───────────────────────────────────────────────────────
 
 class SettingsWindow(QWidget):
     def __init__(self):
@@ -459,64 +342,47 @@ class SettingsWindow(QWidget):
                 border-radius: 2px;
                 min-height: 30px;
             }}
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height:0; }}
             QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{ background:none; }}
             QComboBox {{
                 background: rgba(255,255,255,0.04);
                 color: {C1};
-                border: 1px solid rgba(255,255,255,0.10);
-                border-radius: 10px;
-                padding: 7px 14px;
+                border: 1px solid {BD};
+                border-radius: 8px;
+                padding: 6px 12px;
                 font-size: 13px;
             }}
-            QComboBox:hover {{
-                border-color: rgba(99,102,241,0.4);
-                background: rgba(255,255,255,0.06);
-            }}
-            QComboBox::drop-down {{ border:none; width:26px; }}
+            QComboBox:hover {{ border-color: {BD_H}; }}
+            QComboBox::drop-down {{ border:none; width:24px; }}
             QComboBox QAbstractItemView {{
                 background: #12121A;
                 color: {C1};
-                border: 1px solid rgba(255,255,255,0.10);
+                border: 1px solid {BD};
                 selection-background-color: rgba(99,102,241,0.2);
-                border-radius: 10px;
-                padding: 4px;
+                border-radius: 8px;
+                padding: 2px;
             }}
             QPushButton {{
                 background: transparent;
                 color: {C2};
-                border: 1px solid rgba(255,255,255,0.10);
-                border-radius: 10px;
-                padding: 9px 22px;
+                border: 1px solid {BD};
+                border-radius: 8px;
+                padding: 8px 18px;
                 font-size: 13px;
                 font-weight: 500;
-                min-height: 38px;
+                min-height: 36px;
             }}
-            QPushButton:hover {{
-                border-color: rgba(99,102,241,0.4);
-                color: {C1};
-                background: rgba(99,102,241,0.06);
-            }}
+            QPushButton:hover {{ border-color: {BD_H}; color: {C1}; }}
             QPushButton#ok {{
-                background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
-                    stop:0 {AC}, stop:1 {AC_L});
+                background: {AC};
                 color: white;
                 border: none;
                 font-weight: 600;
-                min-width: 130px;
+                min-width: 120px;
             }}
-            QPushButton#ok:hover {{
-                background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
-                    stop:0 {AC_L}, stop:1 #A78BFA);
-            }}
-            QPushButton#danger {{
-                color: {RED};
-                border-color: rgba(239,68,68,0.25);
-            }}
-            QPushButton#danger:hover {{
-                background: rgba(239,68,68,0.08);
-                border-color: rgba(239,68,68,0.5);
-            }}
+            QPushButton#ok:hover {{ background: {AC_L}; }}
+            QPushButton#danger {{ color:{RED}; border-color:rgba(239,68,68,0.25); }}
+            QPushButton#danger:hover {{ background:rgba(239,68,68,0.08); border-color:rgba(239,68,68,0.5); }}
         """)
 
         root = QHBoxLayout(self)
@@ -526,18 +392,18 @@ class SettingsWindow(QWidget):
         # Sidebar
         sb = QFrame()
         sb.setFixedWidth(220)
-        sb.setStyleSheet(f"background:{BG_SB};border-right:1px solid rgba(255,255,255,0.06);")
+        sb.setStyleSheet(f"background:{BG_SB};border-right:1px solid rgba(255,255,255,0.05);")
         sbl = QVBoxLayout(sb)
-        sbl.setContentsMargins(18, 28, 18, 20)
+        sbl.setContentsMargins(16, 24, 16, 20)
         sbl.setSpacing(2)
 
-        logo = QLabel("\U0001f399  GoodVoice")
+        logo = QLabel("GoodVoice")
         logo.setFont(QFont(F, 18, QFont.Weight.Bold))
-        logo.setStyleSheet(f"color:{C1};padding:0 4px 18px 4px;border:none;")
+        logo.setStyleSheet(f"color:{C1};padding:0 4px 16px 4px;border:none;")
         sbl.addWidget(logo)
 
         self._nav = []
-        for icon, name in [("\u2699\ufe0f", "\u041e\u0441\u043d\u043e\u0432\u043d\u044b\u0435"), ("\U0001f4ca", "\u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430"), ("\U0001f4dc", "\u0418\u0441\u0442\u043e\u0440\u0438\u044f")]:
+        for icon, name in [("\u2699", "\u041e\u0441\u043d\u043e\u0432\u043d\u044b\u0435"), ("\u25c6", "\u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430"), ("\u25a0", "\u0418\u0441\u0442\u043e\u0440\u0438\u044f")]:
             b = Nav(icon, name)
             b.clicked.connect(lambda checked, n=name: self._goto(n))
             sbl.addWidget(b)
@@ -550,7 +416,7 @@ class SettingsWindow(QWidget):
         ct = QFrame()
         ct.setStyleSheet("background:transparent;border:none;")
         ctl = QVBoxLayout(ct)
-        ctl.setContentsMargins(36, 28, 36, 20)
+        ctl.setContentsMargins(32, 24, 32, 16)
         ctl.setSpacing(0)
 
         self._title = QLabel("\u041e\u0441\u043d\u043e\u0432\u043d\u044b\u0435")
@@ -566,11 +432,10 @@ class SettingsWindow(QWidget):
 
         line = QFrame()
         line.setFixedHeight(1)
-        line.setStyleSheet("background:rgba(255,255,255,0.06);border:none;margin:12px 0;")
+        line.setStyleSheet("background:rgba(255,255,255,0.05);border:none;margin:10px 0;")
         ctl.addWidget(line)
 
         fl = QHBoxLayout()
-        fl.setContentsMargins(0, 0, 0, 0)
         fl.addStretch()
         bc = QPushButton("\u0417\u0430\u043a\u0440\u044b\u0442\u044c")
         bc.clicked.connect(self.close)
@@ -586,8 +451,10 @@ class SettingsWindow(QWidget):
 
     def _goto(self, name):
         self._title.setText(name)
-        idx = {"\u041e\u0441\u043d\u043e\u0432\u043d\u044b\u0435": 0, "\u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430": 1, "\u0418\u0441\u0442\u043e\u0440\u0438\u044f": 2}[name]
-        self._stack.setCurrentIndex(idx)
+        self._stack.setCurrentIndex(
+            {"\u041e\u0441\u043d\u043e\u0432\u043d\u044b\u0435": 0,
+             "\u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430": 1,
+             "\u0418\u0441\u0442\u043e\u0440\u0438\u044f": 2}[name])
         for n, b in self._nav:
             b.setChecked(n == name)
 
@@ -597,36 +464,39 @@ class SettingsWindow(QWidget):
         sa.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         c = QWidget()
         lay = QVBoxLayout(c)
-        lay.setContentsMargins(0, 0, 12, 0)
+        lay.setContentsMargins(0, 0, 8, 0)
         lay.setSpacing(10)
 
         lm = {"auto": "Auto", "ru": "Russian", "en": "English",
               "de": "German", "fr": "French", "es": "Spanish"}
 
         defs = [
-            ("\u0413\u043e\u0440\u044f\u0447\u0430\u044f \u043a\u043b\u0430\u0432\u0438\u0448\u0430", "\u041a\u043e\u043c\u0431\u0438\u043d\u0430\u0446\u0438\u044f \u0434\u043b\u044f \u043d\u0430\u0447\u0430\u043b\u0430 \u0437\u0430\u043f\u0438\u0441\u0438 \u0433\u043e\u043b\u043e\u0441\u0430",
+            ("\u0413\u043e\u0440\u044f\u0447\u0430\u044f \u043a\u043b\u0430\u0432\u0438\u0448\u0430",
+             "\u041a\u043e\u043c\u0431\u0438\u043d\u0430\u0446\u0438\u044f \u0434\u043b\u044f \u0437\u0430\u043f\u0438\u0441\u0438 \u0433\u043e\u043b\u043e\u0441\u0430",
              ["Right Alt", "Right Ctrl", "Left Ctrl"],
              "Right Alt" if self.settings.hotkey == "alt_r" else
              ("Right Ctrl" if self.settings.hotkey == "ctrl_r" else "Left Ctrl")),
-            ("\u0420\u0435\u0436\u0438\u043c \u0437\u0430\u043f\u0438\u0441\u0438", "Hold \u2014 \u0437\u0430\u0436\u0430\u043b/\u043e\u0442\u043f\u0443\u0441\u0442\u0438\u043b. Toggle \u2014 \u043d\u0430\u0436\u0430\u043b/\u043d\u0430\u0436\u0430\u043b",
+            ("\u0420\u0435\u0436\u0438\u043c \u0437\u0430\u043f\u0438\u0441\u0438",
+             "Hold \u2014 \u0437\u0430\u0436\u0430\u043b/\u043e\u0442\u043f\u0443\u0441\u0442\u0438\u043b. Toggle \u2014 \u043d\u0430\u0436\u0430\u043b/\u043d\u0430\u0436\u0430\u043b",
              ["\u0417\u0430\u0436\u0430\u0442\u0438\u0435 (Hold)", "\u041f\u0435\u0440\u0435\u043a\u043b\u044e\u0447\u0435\u043d\u0438\u0435 (Toggle)"],
              "\u0417\u0430\u0436\u0430\u0442\u0438\u0435 (Hold)" if self.settings.trigger_mode == "hold" else "\u041f\u0435\u0440\u0435\u043a\u043b\u044e\u0447\u0435\u043d\u0438\u0435 (Toggle)"),
             ("\u042f\u0437\u044b\u043a", "\u042f\u0437\u044b\u043a \u0440\u0430\u0441\u043f\u043e\u0437\u043d\u0430\u0432\u0430\u043d\u0438\u044f \u0440\u0435\u0447\u0438",
              ["Auto", "Russian", "English", "German", "French", "Spanish"],
              lm.get(self.settings.language, "Auto")),
-            ("\u0422\u0435\u043c\u0430 HUD", "\u0412\u0438\u0437\u0443\u0430\u043b\u044c\u043d\u044b\u0439 \u0441\u0442\u0438\u043b\u044c \u043f\u043b\u0430\u0432\u0430\u044e\u0449\u0435\u0433\u043e \u043e\u043a\u043d\u0430",
+            ("\u0422\u0435\u043c\u0430 HUD",
+             "\u0412\u0438\u0437\u0443\u0430\u043b\u044c\u043d\u044b\u0439 \u0441\u0442\u0438\u043b\u044c \u043f\u043b\u0430\u0432\u0430\u044e\u0449\u0435\u0433\u043e \u043e\u043a\u043d\u0430",
              ["hybrid_v2", "google", "google_v2", "hybrid", "vercel"],
              self.settings.hud_theme),
         ]
 
-        self._combos = []
+        self._c = []
         for title, desc, items, cur in defs:
-            f = GlassCard()
+            f = card()
             fl = QHBoxLayout(f)
-            fl.setContentsMargins(22, 0, 22, 0)
-            fl.setSpacing(16)
+            fl.setContentsMargins(20, 0, 20, 0)
+            fl.setSpacing(12)
             col = QVBoxLayout()
-            col.setSpacing(2)
+            col.setSpacing(1)
             t = QLabel(title)
             t.setFont(QFont(F, 14, QFont.Weight.Medium))
             t.setStyleSheet(f"color:{C1};background:transparent;border:none;")
@@ -636,18 +506,18 @@ class SettingsWindow(QWidget):
             d.setStyleSheet(f"color:{C3};background:transparent;border:none;")
             col.addWidget(d)
             fl.addLayout(col, 1)
-            cb = cmb(items, cur)
+            cb = combo(items, cur)
             fl.addWidget(cb)
-            self._combos.append(cb)
+            self._c.append(cb)
             lay.addWidget(f)
 
         # Toggle
-        f = GlassCard()
+        f = card()
         fl = QHBoxLayout(f)
-        fl.setContentsMargins(22, 0, 22, 0)
-        fl.setSpacing(16)
+        fl.setContentsMargins(20, 0, 20, 0)
+        fl.setSpacing(12)
         col = QVBoxLayout()
-        col.setSpacing(2)
+        col.setSpacing(1)
         t = QLabel("\u041f\u0443\u043d\u043a\u0442\u0443\u0430\u0446\u0438\u044f")
         t.setFont(QFont(F, 14, QFont.Weight.Medium))
         t.setStyleSheet(f"color:{C1};background:transparent;border:none;")
@@ -657,7 +527,7 @@ class SettingsWindow(QWidget):
         d.setStyleSheet(f"color:{C3};background:transparent;border:none;")
         col.addWidget(d)
         fl.addLayout(col, 1)
-        self.tog = NeonToggle(self.settings.punctuation)
+        self.tog = Toggle(self.settings.punctuation)
         fl.addWidget(self.tog)
         lay.addWidget(f)
 
@@ -671,29 +541,29 @@ class SettingsWindow(QWidget):
         sa.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         c = QWidget()
         lay = QVBoxLayout(c)
-        lay.setContentsMargins(0, 0, 12, 0)
-        lay.setSpacing(16)
+        lay.setContentsMargins(0, 0, 8, 0)
+        lay.setSpacing(12)
 
         st = self.stats
         row = QHBoxLayout()
-        row.setSpacing(12)
+        row.setSpacing(10)
         for val, lbl in [
             (str(st.total_sessions), "\u0421\u0435\u0441\u0441\u0438\u0439"),
             (f"{st.total_words:,}", "\u0421\u043b\u043e\u0432"),
             (f"{st.total_chars:,}", "\u0421\u0438\u043c\u0432\u043e\u043b\u043e\u0432"),
-            (f"{st.avg_words:.0f}", "\u0421\u043b\u043e\u0432 / \u0441\u0435\u0441\u0441\u0438\u044f"),
+            (f"{st.avg_words:.0f}", "\u0421\u043b\u043e\u0432/\u0441\u0435\u0441\u0441\u0438\u044f"),
         ]:
-            row.addWidget(NeonKPI(val, lbl))
+            row.addWidget(kpi(val, lbl))
         lay.addLayout(row)
 
         if st.sessions:
-            f = GlassCard()
-            f.setMinimumHeight(280)
+            f = card()
+            f.setMinimumHeight(240)
             fl = QVBoxLayout(f)
-            fl.setContentsMargins(22, 18, 22, 14)
-            fl.setSpacing(8)
+            fl.setContentsMargins(20, 14, 20, 10)
+            fl.setSpacing(4)
             t = QLabel("\u0410\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c \u043f\u043e \u0434\u043d\u044f\u043c")
-            t.setFont(QFont(F, 13, QFont.Weight.Medium))
+            t.setFont(QFont(F, 12, QFont.Weight.Medium))
             t.setStyleSheet(f"color:{C2};background:transparent;border:none;")
             fl.addWidget(t)
 
@@ -707,10 +577,10 @@ class SettingsWindow(QWidget):
             for i in range(13, -1, -1):
                 d = today - timedelta(days=i)
                 key = d.strftime("%d.%m")
-                label = ["\u041f\u043d", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041f\u0442", "\u0421\u0431", "\u0412\u0441"][d.weekday()]
-                days.append((label, daily.get(key, 0), d.strftime("%d %B")))
+                lbl = ["\u041f\u043d", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041f\u0442", "\u0421\u0431", "\u0412\u0441"][d.weekday()]
+                days.append((lbl, daily.get(key, 0), d.strftime("%d %B")))
 
-            chart = FluidChart(days)
+            chart = Chart(days)
             chart.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
             fl.addWidget(chart, 1)
             lay.addWidget(f, 1)
@@ -731,7 +601,7 @@ class SettingsWindow(QWidget):
         sa.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         c = QWidget()
         lay = QVBoxLayout(c)
-        lay.setContentsMargins(0, 0, 12, 0)
+        lay.setContentsMargins(0, 0, 8, 0)
         lay.setSpacing(6)
 
         entries = self.history.get_recent(30)
@@ -743,8 +613,7 @@ class SettingsWindow(QWidget):
             lay.addWidget(lbl)
         else:
             for e in entries:
-                row = HRow(e)
-                lay.addWidget(row)
+                lay.addWidget(Row(e))
             lay.addSpacing(8)
             btn = QPushButton("\u041e\u0447\u0438\u0441\u0442\u0438\u0442\u044c \u0438\u0441\u0442\u043e\u0440\u0438\u044e")
             btn.setObjectName("danger")
@@ -756,7 +625,8 @@ class SettingsWindow(QWidget):
         return sa
 
     def _clr(self):
-        if QMessageBox.question(self, "\u041e\u0447\u0438\u0441\u0442\u043a\u0430", "\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u0432\u0441\u044e \u0438\u0441\u0442\u043e\u0440\u0438\u044e?",
+        if QMessageBox.question(self, "\u041e\u0447\u0438\u0441\u0442\u043a\u0430",
+                "\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u0432\u0441\u044e \u0438\u0441\u0442\u043e\u0440\u0438\u044e?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         ) == QMessageBox.StandardButton.Yes:
             self.history.clear()
@@ -768,10 +638,10 @@ class SettingsWindow(QWidget):
         hm = {"Right Alt": "alt_r", "Right Ctrl": "ctrl_r", "Left Ctrl": "ctrl_l"}
         lm = {"Auto": "auto", "Russian": "ru", "English": "en",
               "German": "de", "French": "fr", "Spanish": "es"}
-        self.settings.hotkey = hm.get(self._combos[0].currentText(), "alt_r")
-        self.settings.trigger_mode = "hold" if self._combos[1].currentIndex() == 0 else "toggle"
-        self.settings.language = lm.get(self._combos[2].currentText(), "auto")
-        self.settings.hud_theme = self._combos[3].currentText()
+        self.settings.hotkey = hm.get(self._c[0].currentText(), "alt_r")
+        self.settings.trigger_mode = "hold" if self._c[1].currentIndex() == 0 else "toggle"
+        self.settings.language = lm.get(self._c[2].currentText(), "auto")
+        self.settings.hud_theme = self._c[3].currentText()
         self.settings.punctuation = self.tog.isChecked()
         self.settings.save()
         self.close()
