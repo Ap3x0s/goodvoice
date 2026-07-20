@@ -182,9 +182,8 @@ class HudWidget(QWidget):
 
         if self._state == HudState.RECORDING:
             self._draw_bars(p)
+            self._draw_center_info(p)
             self._draw_vol_meter(p)
-            self._draw_timer(p)
-            self._draw_language(p)
         elif self._state == HudState.THINKING:
             self._draw_shimmer(p)
         elif self._state == HudState.SUCCESS:
@@ -366,23 +365,20 @@ class HudWidget(QWidget):
         p.setBrush(QBrush(c))
         p.drawPath(fill)
 
-    # ── Timer (right side) ───────────────────────────────────────
+    # ── Center info (timer + language) ───────────────────────────
 
-    def _draw_timer(self, p):
+    def _draw_center_info(self, p):
         elapsed = time.time() - self._rec_start
         mins = int(elapsed) // 60
         secs = int(elapsed) % 60
-        text = f"{mins}:{secs:02d}"
+        timer_text = f"{mins}:{secs:02d}"
+        lang_text = self._language
+
+        # Combined: "0:03  AUTO"
+        combined = f"{timer_text}  {lang_text}"
         p.setFont(QFont("Consolas", 10))
-        p.setPen(QColor(255, 255, 255, 120))
-        p.drawText(QRectF(self.W - 80, 0, 40, self.H), Qt.AlignmentFlag.AlignCenter, text)
-
-    # ── Language indicator (right side) ──────────────────────────
-
-    def _draw_language(self, p):
-        p.setFont(QFont("Consolas", 9))
-        p.setPen(QColor(255, 255, 255, 80))
-        p.drawText(QRectF(self.W - 80, self.H - 18, 40, 14), Qt.AlignmentFlag.AlignCenter, self._language)
+        p.setPen(QColor(255, 255, 255, 130))
+        p.drawText(QRectF(0, 0, self.W, self.H), Qt.AlignmentFlag.AlignCenter, combined)
 
     # ── Shimmer (thinking) ───────────────────────────────────────
 
