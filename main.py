@@ -96,8 +96,7 @@ class GoodVoiceApp:
             print("[REC] слишком коротко")
             if self._root():
                 self._root().after(0, lambda: self.hud.update_text("Слишком коротко"))
-                self._root().after(800, lambda: self.hud.set_ready())
-                self._root().after(800, lambda: self.hud.update_text("Нажмите Right Ctrl"))
+                self._root().after(1000, self.hud.hide)
             return
 
         print(f"[REC] аудио: {len(audio)/16000:.1f}с, распознавание...")
@@ -125,23 +124,21 @@ class GoodVoiceApp:
 
                     if self._root():
                         if success:
-                            self._root().after(0, lambda: self.hud.update_text("Вставлено ✓"))
+                            self._root().after(0, lambda: self.hud.update_text("Вставлено"))
                         else:
                             self._root().after(0, lambda: self.hud.update_text("Не удалось вставить"))
-                        self._root().after(1200, lambda: self.hud.set_ready())
-                        self._root().after(1200, lambda: self.hud.update_text("Нажмите Right Ctrl"))
+                        # Hide HUD after 1.5 seconds
+                        self._root().after(1500, self.hud.hide)
                 else:
                     if self._root():
-                        self._root().after(0, lambda: self.hud.update_text("Ничего не распознано"))
-                        self._root().after(1000, lambda: self.hud.set_ready())
-                        self._root().after(1000, lambda: self.hud.update_text("Нажмите Right Ctrl"))
+                        self._root().after(0, lambda: self.hud.update_text("Тишина"))
+                        self._root().after(1000, self.hud.hide)
 
             except Exception as e:
                 print(f"[REC] ошибка: {e}")
                 if self._root():
-                    self._root().after(0, lambda: self.hud.update_text(f"Ошибка: {str(e)[:40]}"))
-                    self._root().after(2000, lambda: self.hud.set_ready())
-                    self._root().after(2000, lambda: self.hud.update_text("Нажмите Right Ctrl"))
+                    self._root().after(0, lambda: self.hud.update_text("Ошибка"))
+                    self._root().after(1500, self.hud.hide)
 
         threading.Thread(target=_do_transcribe, daemon=True).start()
 
@@ -151,8 +148,7 @@ class GoodVoiceApp:
         if self._root():
             self._root().after(0, lambda: self.hud.set_recording(False))
             self._root().after(0, lambda: self.hud.update_text("Отменено"))
-            self._root().after(800, lambda: self.hud.set_ready())
-            self._root().after(800, lambda: self.hud.update_text("Нажмите Right Ctrl"))
+            self._root().after(800, self.hud.hide)
 
     def _quit(self):
         self._running = False
