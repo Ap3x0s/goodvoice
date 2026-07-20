@@ -159,17 +159,42 @@ def combo(items, cur=None):
         QComboBox:focus {{
             border-color: {AC};
         }}
+        QComboBox::drop-down {{
+            subcontrol-origin: padding;
+            subcontrol-position: top right;
+            width: 28px;
+            border: none;
+            border-left: 1px solid {BDR};
+            background: transparent;
+        }}
+        QComboBox::down-arrow {{
+            width: 10px;
+            height: 10px;
+            image: none;
+        }}
         QComboBox QAbstractItemView {{
-            background: {CARD};
+            background: #0D0D0D;
             color: {T1};
-            border: 1px solid {BDR};
-            selection-background-color: rgba(0,102,255,0.15);
+            border: 1px solid rgba(0,102,255,0.2);
+            selection-background-color: rgba(0,102,255,0.12);
             selection-color: {T1};
             outline: none;
+            padding: 2px;
         }}
         QComboBox QAbstractItemView::item {{
-            padding: 6px 10px;
-            min-height: 28px;
+            padding: 8px 14px;
+            min-height: 32px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }}
+        QComboBox QAbstractItemView::item:last {{
+            border-bottom: none;
+        }}
+        QComboBox QAbstractItemView::item:hover {{
+            background: rgba(0,102,255,0.08);
+        }}
+        QComboBox QAbstractItemView::item:selected {{
+            background: rgba(0,102,255,0.12);
+            color: {T1};
         }}
     """)
     return c
