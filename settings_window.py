@@ -1,4 +1,4 @@
-"""GoodVoice Settings — clean premium dark UI."""
+"""GoodVoice Settings — UI/UX Pro Max compliant."""
 
 import sys
 from datetime import datetime, timedelta
@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QRectF, QPointF
 from PyQt6.QtGui import (
     QFont, QColor, QPainter, QLinearGradient, QPen, QBrush,
-    QRadialGradient, QPainterPath
+    QRadialGradient, QPainterPath, QFocusEvent
 )
 
 from settings import Settings
@@ -19,43 +19,32 @@ from stats import Stats
 from history import History
 
 
-# ── Design System ────────────────────────────────────────────────
+# ── Design Tokens (8px grid) ────────────────────────────────────
 
-# Background layers (darkest to lightest)
-BG0 = "#09090B"       # window
-BG1 = "#0F1015"       # sidebar
-BG2 = "#18181D"       # cards
-BG3 = "#1F1F26"       # card hover / active
-
-# Borders
+BG0 = "#09090B"
+BG1 = "#0F1015"
+BG2 = "#18181D"
+BG3 = "#1F1F26"
 B0 = "rgba(255,255,255,0.06)"
-B1 = "rgba(255,255,255,0.10)"
-
-# Text
-T1 = "#F4F4F5"        # primary
-T2 = "#A1A1AA"        # secondary
-T3 = "#52525B"        # muted
-
-# Accent
-A1 = "#7C3AED"        # violet-600
-A2 = "#8B5CF6"        # violet-500
-A3 = "#6D28D9"        # violet-700
-
-# Font
+T1 = "#F4F4F5"
+T2 = "#A1A1AA"
+T3 = "#71717A"
+A1 = "#7C3AED"
+A2 = "#8B5CF6"
+A3 = "#6D28D9"
 FN = "Segoe UI"
 FM = "Consolas"
 
 
-# ── Widgets ──────────────────────────────────────────────────────
+# ── Card ─────────────────────────────────────────────────────────
 
 class Card(QWidget):
-    """Glass card with hover glow."""
     def __init__(self):
         super().__init__()
         self._g = 0.0
         self._t = 0.0
         self.setMouseTracking(True)
-        self.setMinimumHeight(64)
+        self.setMinimumHeight(72)
 
     def enterEvent(self, e):
         self._t = 1.0
@@ -70,13 +59,10 @@ class Card(QWidget):
 
         path = QPainterPath()
         path.addRoundedRect(QRectF(0, 0, w, h), 12, 12)
-
-        # Fill
         p.setPen(Qt.PenStyle.NoPen)
         p.setBrush(QBrush(QColor(BG2)))
         p.drawPath(path)
 
-        # Border
         if self._g > 0.01:
             c = QColor(A2)
             c.setAlpha(int(20 + self._g * 40))
@@ -85,20 +71,22 @@ class Card(QWidget):
             p.setPen(QPen(QColor(B0), 1))
         p.setBrush(Qt.BrushStyle.NoBrush)
         p.drawPath(path)
-
         p.end()
+
         if abs(self._g - self._t) > 0.005:
             self.update()
 
 
+# ── Switch (44x24, touch target via padding) ─────────────────────
+
 class Switch(QWidget):
-    """Toggle switch."""
     def __init__(self, on=False):
         super().__init__()
         self._on = on
         self._p = 1.0 if on else 0.0
-        self.setFixedSize(44, 24)
+        self.setFixedSize(52, 32)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
     def isChecked(self):
         return self._on
@@ -106,6 +94,11 @@ class Switch(QWidget):
     def mousePressEvent(self, e):
         self._on = not self._on
         self.update()
+
+    def keyPressEvent(self, e):
+        if e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Space):
+            self._on = not self._on
+            self.update()
 
     def paintEvent(self, e):
         tgt = 1.0 if self._on else 0.0
@@ -118,7 +111,7 @@ class Switch(QWidget):
         c = QColor(A1) if self._on else QColor(BG3)
         p.setPen(Qt.PenStyle.NoPen)
         p.setBrush(QBrush(c))
-        p.drawRoundedRect(QRectF(0, 0, 44, 24), 12, 12)
+        p.drawRoundedRect(QRectF(4, 4, 44, 24), 12, 12)
 
         # Border
         if self._on:
@@ -128,18 +121,26 @@ class Switch(QWidget):
             bc = QColor(255, 255, 255, 20)
         p.setPen(QPen(bc, 1))
         p.setBrush(Qt.BrushStyle.NoBrush)
-        p.drawRoundedRect(QRectF(0, 0, 44, 24), 12, 12)
+        p.drawRoundedRect(QRectF(4, 4, 44, 24), 12, 12)
+
+        # Focus ring
+        if self.hasFocus():
+            p.setPen(QPen(QColor(A2), 2))
+            p.setBrush(Qt.BrushStyle.NoBrush)
+            p.drawRoundedRect(QRectF(1, 1, 50, 30), 14, 14)
 
         # Thumb
-        x = 3 + self._p * 20
+        x = 7 + self._p * 20
         p.setPen(Qt.PenStyle.NoPen)
         p.setBrush(QBrush(QColor(T1)))
-        p.drawEllipse(QPointF(x + 9, 12), 7, 7)
+        p.drawEllipse(QPointF(x + 9, 16), 7, 7)
 
         p.end()
         if abs(self._p - tgt) > 0.01:
             self.update()
 
+
+# ── Combo (44px height for touch target) ─────────────────────────
 
 def combo(items, cur=None):
     c = QComboBox()
@@ -147,14 +148,17 @@ def combo(items, cur=None):
     if cur and cur in items:
         c.setCurrentText(cur)
     c.setFixedWidth(180)
-    c.setFixedHeight(34)
+    c.setFixedHeight(40)
+    c.setCursor(Qt.CursorShape.PointingHandCursor)
     return c
 
+
+# ── Nav (44px height) ───────────────────────────────────────────
 
 class Nav(QPushButton):
     def __init__(self, icon, text):
         super().__init__(f"  {icon}  {text}")
-        self.setFixedHeight(38)
+        self.setFixedHeight(44)
         self.setCheckable(True)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setStyleSheet(f"""
@@ -164,11 +168,16 @@ class Nav(QPushButton):
                 border-radius: 0 8px 8px 0;
                 padding: 0 16px; text-align: left;
                 font-size: 13px; font-family: {FN};
+                min-height: 44px;
             }}
             QPushButton:hover {{ background: {BG3}; color: {T2}; }}
             QPushButton:checked {{
                 background: rgba(124,58,237,0.12); color: {T1};
                 font-weight: 600; border-left: 3px solid {A1};
+            }}
+            QPushButton:focus {{
+                outline: 2px solid {A2};
+                outline-offset: -2px;
             }}
         """)
 
@@ -201,11 +210,11 @@ class Chart(QWidget):
     def _hit(self, pos):
         w = self.width()
         n = len(self.data)
-        bw = max(12, min(18, (w - 32 - (n - 1) * 5) // n))
-        total = n * bw + (n - 1) * 5
+        bw = max(12, min(18, (w - 32 - (n - 1) * 8) // n))
+        total = n * bw + (n - 1) * 8
         sx = 16 + (w - 32 - total) // 2
         for i in range(n):
-            x = sx + i * (bw + 5)
+            x = sx + i * (bw + 8)
             if x <= pos.x() <= x + bw:
                 return i
         return -1
@@ -215,22 +224,21 @@ class Chart(QWidget):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         w, h = self.width(), self.height()
-        mt, mb = 10, 26
+        mt, mb = 16, 32
         ch = h - mt - mb
         mx = max(v for _, v, _ in self.data) or 1
 
-        # Grid
         p.setPen(QPen(QColor(255, 255, 255, 5), 1, Qt.PenStyle.DotLine))
         for i in range(1, 4):
             p.drawLine(16, mt + int(ch * i / 4), w - 16, mt + int(ch * i / 4))
 
         n = len(self.data)
-        bw = max(12, min(18, (w - 32 - (n - 1) * 5) // n))
-        total = n * bw + (n - 1) * 5
+        bw = max(12, min(18, (w - 32 - (n - 1) * 8) // n))
+        total = n * bw + (n - 1) * 8
         sx = 16 + (w - 32 - total) // 2
 
         for i, (lbl, val, _) in enumerate(self.data):
-            x = sx + i * (bw + 5)
+            x = sx + i * (bw + 8)
             if val == 0:
                 p.setPen(Qt.PenStyle.NoPen)
                 p.setBrush(QBrush(QColor(255, 255, 255, 8)))
@@ -246,8 +254,8 @@ class Chart(QWidget):
                 p.drawRoundedRect(x, y, bw, bh, 3, 3)
 
             p.setPen(QColor(T3))
-            p.setFont(QFont(FN, 8))
-            p.drawText(x, h - 16, bw, 14, Qt.AlignmentFlag.AlignCenter, lbl)
+            p.setFont(QFont(FN, 9))
+            p.drawText(x, h - 20, bw, 16, Qt.AlignmentFlag.AlignCenter, lbl)
         p.end()
 
 
@@ -261,8 +269,9 @@ class Row(QWidget):
         self._wc = entry.get("word_count", len(self._text.split()))
         self._g = 0.0
         self._t = 0.0
-        self.setFixedHeight(52)
+        self.setFixedHeight(56)
         self.setMouseTracking(True)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
 
     def enterEvent(self, e):
         self._t = 1.0; self.update()
@@ -279,13 +288,10 @@ class Row(QWidget):
 
         path = QPainterPath()
         path.addRoundedRect(QRectF(0, 0, w, h), 10, 10)
-
-        # Fill
         p.setPen(Qt.PenStyle.NoPen)
         p.setBrush(QBrush(QColor(BG2)))
         p.drawPath(path)
 
-        # Border
         if self._g > 0.01:
             c = QColor(A2)
             c.setAlpha(int(15 + self._g * 30))
@@ -295,31 +301,28 @@ class Row(QWidget):
         p.setBrush(Qt.BrushStyle.NoBrush)
         p.drawPath(path)
 
-        # Time pill
         ts = datetime.fromtimestamp(self._ts).strftime("%H:%M")
-        pill = QRectF(14, 13, 48, 26)
+        pill = QRectF(16, 14, 52, 28)
         p.setPen(Qt.PenStyle.NoPen)
         p.setBrush(QBrush(QColor(BG3)))
-        p.drawRoundedRect(pill, 7, 7)
+        p.drawRoundedRect(pill, 8, 8)
         p.setPen(QColor(T2))
         p.setFont(QFont(FM, 10))
         p.drawText(pill, Qt.AlignmentFlag.AlignCenter, ts)
 
-        # Text
         txt = self._text[:80] + ("..." if len(self._text) > 80 else "")
         p.setPen(QColor(T2))
         p.setFont(QFont(FN, 13))
-        p.drawText(QRectF(72, 10, w - 170, 32),
+        p.drawText(QRectF(80, 12, w - 190, 32),
                    Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, txt)
 
-        # Word chip
         chip = f"{self._wc} \u0441\u043b\u043e\u0432"
-        cr = QRectF(w - 100, 14, 70, 24)
+        cr = QRectF(w - 110, 15, 76, 26)
         p.setPen(QPen(QColor(124, 58, 237, 50), 1))
         p.setBrush(QBrush(QColor(124, 58, 237, 12)))
-        p.drawRoundedRect(cr, 10, 10)
+        p.drawRoundedRect(cr, 12, 12)
         p.setPen(QColor(A2))
-        p.setFont(QFont(FN, 9))
+        p.setFont(QFont(FN, 10))
         p.drawText(cr, Qt.AlignmentFlag.AlignCenter, chip)
 
         p.end()
@@ -334,7 +337,7 @@ class KPI(QWidget):
         super().__init__()
         self._val = val
         self._lbl = lbl
-        self.setFixedHeight(96)
+        self.setFixedHeight(104)
 
     def paintEvent(self, e):
         p = QPainter(self)
@@ -350,9 +353,8 @@ class KPI(QWidget):
         p.setBrush(Qt.BrushStyle.NoBrush)
         p.drawPath(path)
 
-        # Subtle gradient overlay
         glow = QRadialGradient(QPointF(w * 0.2, 0), w * 0.6)
-        glow.setColorAt(0, QColor(124, 58, 237, 15))
+        glow.setColorAt(0, QColor(124, 58, 237, 12))
         glow.setColorAt(1, QColor(0, 0, 0, 0))
         p.setPen(Qt.PenStyle.NoPen)
         p.setBrush(QBrush(glow))
@@ -360,11 +362,11 @@ class KPI(QWidget):
 
         p.setPen(QColor(T1))
         p.setFont(QFont(FM, 28, QFont.Weight.Bold))
-        p.drawText(QRectF(20, 12, w - 40, 44),
+        p.drawText(QRectF(20, 14, w - 40, 44),
                    Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, self._val)
         p.setPen(QColor(T2))
         p.setFont(QFont(FN, 12))
-        p.drawText(QRectF(20, 56, w - 40, 28),
+        p.drawText(QRectF(20, 60, w - 40, 28),
                    Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop, self._lbl)
         p.end()
 
@@ -387,38 +389,46 @@ class SettingsWindow(QWidget):
             QWidget {{ background: {BG0}; color: {T1}; font-family: {FN}; }}
             QScrollArea {{ border:none; background:transparent; }}
             QScrollBar:vertical {{
-                background: transparent; width: 4px; margin: 0 6px 0 0;
+                background: transparent; width: 4px; margin: 0 8px 0 0;
             }}
             QScrollBar::handle:vertical {{
-                background: rgba(255,255,255,0.06); border-radius: 2px; min-height: 20px;
+                background: rgba(255,255,255,0.06); border-radius: 2px; min-height: 24px;
             }}
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height:0; }}
             QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{ background:none; }}
             QComboBox {{
                 background: {BG3}; color: {T1};
                 border: 1px solid {B0}; border-radius: 8px;
-                padding: 6px 12px; font-size: 13px;
+                padding: 8px 12px; font-size: 13px;
+                min-height: 40px;
             }}
             QComboBox:hover {{ border-color: {A2}; }}
-            QComboBox::drop-down {{ border:none; width:24px; }}
+            QComboBox::drop-down {{ border:none; width:28px; }}
+            QComboBox:focus {{ border-color: {A2}; }}
             QComboBox QAbstractItemView {{
                 background: {BG2}; color: {T1};
                 border: 1px solid {B0};
                 selection-background-color: rgba(124,58,237,0.2);
-                border-radius: 8px; padding: 2px;
+                border-radius: 8px; padding: 4px;
             }}
             QPushButton {{
                 background: transparent; color: {T2};
                 border: 1px solid {B0}; border-radius: 8px;
-                padding: 8px 18px; font-size: 13px; font-weight: 500;
-                min-height: 36px;
+                padding: 10px 20px; font-size: 13px; font-weight: 500;
+                min-height: 44px; min-width: 44px;
             }}
             QPushButton:hover {{ border-color: {A2}; color: {T1}; }}
+            QPushButton:focus {{
+                outline: 2px solid {A2};
+                outline-offset: -2px;
+            }}
+            QPushButton:pressed {{ background: {BG3}; }}
             QPushButton#ok {{
                 background: {A1}; color: {T1};
                 border: none; font-weight: 600; min-width: 120px;
             }}
             QPushButton#ok:hover {{ background: {A3}; }}
+            QPushButton#ok:pressed {{ background: {A3}; }}
             QPushButton#danger {{ color:#EF4444; border-color:rgba(239,68,68,0.2); }}
             QPushButton#danger:hover {{ background:rgba(239,68,68,0.06); border-color:rgba(239,68,68,0.4); }}
         """)
@@ -427,17 +437,16 @@ class SettingsWindow(QWidget):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        # Sidebar
         sb = QFrame()
-        sb.setFixedWidth(220)
+        sb.setFixedWidth(224)
         sb.setStyleSheet(f"background:{BG1};border-right:1px solid {B0};")
         sbl = QVBoxLayout(sb)
-        sbl.setContentsMargins(16, 24, 16, 20)
-        sbl.setSpacing(2)
+        sbl.setContentsMargins(16, 24, 16, 24)
+        sbl.setSpacing(4)
 
         logo = QLabel("GoodVoice")
-        logo.setFont(QFont(FN, 17, QFont.Weight.Bold))
-        logo.setStyleSheet(f"color:{T1};padding:0 4px 14px 4px;border:none;")
+        logo.setFont(QFont(FN, 18, QFont.Weight.Bold))
+        logo.setStyleSheet(f"color:{T1};padding:0 4px 16px 4px;border:none;")
         sbl.addWidget(logo)
 
         self._nav = []
@@ -452,7 +461,6 @@ class SettingsWindow(QWidget):
 
         root.addWidget(sb)
 
-        # Content
         ct = QFrame()
         ct.setStyleSheet("background:transparent;border:none;")
         ctl = QVBoxLayout(ct)
@@ -460,7 +468,7 @@ class SettingsWindow(QWidget):
         ctl.setSpacing(0)
 
         self._title = QLabel("\u041e\u0441\u043d\u043e\u0432\u043d\u044b\u0435")
-        self._title.setFont(QFont(FN, 22, QFont.Weight.Bold))
+        self._title.setFont(QFont(FN, 24, QFont.Weight.Bold))
         self._title.setStyleSheet(f"color:{T1};border:none;")
         ctl.addWidget(self._title)
 
@@ -472,7 +480,7 @@ class SettingsWindow(QWidget):
 
         line = QFrame()
         line.setFixedHeight(1)
-        line.setStyleSheet(f"background:{B0};border:none;margin:10px 0;")
+        line.setStyleSheet(f"background:{B0};border:none;margin:12px 0;")
         ctl.addWidget(line)
 
         fl = QHBoxLayout()
@@ -505,7 +513,7 @@ class SettingsWindow(QWidget):
         c = QWidget()
         lay = QVBoxLayout(c)
         lay.setContentsMargins(0, 0, 8, 0)
-        lay.setSpacing(10)
+        lay.setSpacing(8)
 
         lm = {"auto": "Auto", "ru": "Russian", "en": "English",
               "de": "German", "fr": "French", "es": "Spanish"}
@@ -535,15 +543,15 @@ class SettingsWindow(QWidget):
             f = Card()
             fl = QHBoxLayout(f)
             fl.setContentsMargins(20, 0, 20, 0)
-            fl.setSpacing(12)
+            fl.setSpacing(16)
             col = QVBoxLayout()
-            col.setSpacing(1)
+            col.setSpacing(2)
             t = QLabel(title)
             t.setFont(QFont(FN, 14, QFont.Weight.Medium))
             t.setStyleSheet(f"color:{T1};background:transparent;border:none;")
             col.addWidget(t)
             d = QLabel(desc)
-            d.setFont(QFont(FN, 11))
+            d.setFont(QFont(FN, 12))
             d.setStyleSheet(f"color:{T3};background:transparent;border:none;")
             col.addWidget(d)
             fl.addLayout(col, 1)
@@ -555,15 +563,15 @@ class SettingsWindow(QWidget):
         f = Card()
         fl = QHBoxLayout(f)
         fl.setContentsMargins(20, 0, 20, 0)
-        fl.setSpacing(12)
+        fl.setSpacing(16)
         col = QVBoxLayout()
-        col.setSpacing(1)
+        col.setSpacing(2)
         t = QLabel("\u041f\u0443\u043d\u043a\u0442\u0443\u0430\u0446\u0438\u044f")
         t.setFont(QFont(FN, 14, QFont.Weight.Medium))
         t.setStyleSheet(f"color:{T1};background:transparent;border:none;")
         col.addWidget(t)
         d = QLabel("\u0410\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0438 \u0440\u0430\u0441\u0441\u0442\u0430\u0432\u043b\u044f\u0435\u0442 \u0437\u0430\u043f\u044f\u0442\u044b\u0435 \u0438 \u0442\u043e\u0447\u043a\u0438")
-        d.setFont(QFont(FN, 11))
+        d.setFont(QFont(FN, 12))
         d.setStyleSheet(f"color:{T3};background:transparent;border:none;")
         col.addWidget(d)
         fl.addLayout(col, 1)
@@ -586,7 +594,7 @@ class SettingsWindow(QWidget):
 
         st = self.stats
         row = QHBoxLayout()
-        row.setSpacing(10)
+        row.setSpacing(12)
         for val, lbl in [
             (str(st.total_sessions), "\u0421\u0435\u0441\u0441\u0438\u0439"),
             (f"{st.total_words:,}", "\u0421\u043b\u043e\u0432"),
@@ -600,10 +608,10 @@ class SettingsWindow(QWidget):
             f = Card()
             f.setMinimumHeight(240)
             fl = QVBoxLayout(f)
-            fl.setContentsMargins(20, 14, 20, 10)
+            fl.setContentsMargins(20, 16, 20, 12)
             fl.setSpacing(4)
             t = QLabel("\u0410\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c \u043f\u043e \u0434\u043d\u044f\u043c")
-            t.setFont(QFont(FN, 12, QFont.Weight.Medium))
+            t.setFont(QFont(FN, 13, QFont.Weight.Medium))
             t.setStyleSheet(f"color:{T2};background:transparent;border:none;")
             fl.addWidget(t)
 
@@ -642,7 +650,7 @@ class SettingsWindow(QWidget):
         c = QWidget()
         lay = QVBoxLayout(c)
         lay.setContentsMargins(0, 0, 8, 0)
-        lay.setSpacing(6)
+        lay.setSpacing(8)
 
         entries = self.history.get_recent(30)
         if not entries:
