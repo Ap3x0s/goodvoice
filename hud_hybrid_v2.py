@@ -57,8 +57,8 @@ class Spring:
 class HudWidget(QWidget):
     """Hybrid v2: bars+shimmer from v1, spring+glass from hybrid, RMS glow, timer, vol meter."""
 
-    W = 400
-    H = 64
+    W = 408
+    H = 72
     CORNER_R = 32
 
     def __init__(self):
@@ -273,13 +273,17 @@ class HudWidget(QWidget):
 
     def _draw_glass(self, p):
         r = self.CORNER_R
+        # Very subtle top highlight
         hl = QPainterPath()
-        hl.addRoundedRect(QRectF(10, 1, self.W - 20, 1), 1, 1)
-        p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(Pal.GLASS_TOP)); p.drawPath(hl)
+        hl.addRoundedRect(QRectF(16, 1, self.W - 32, 1), 1, 1)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QBrush(QColor(255, 255, 255, 8)))
+        p.drawPath(hl)
+        # Inner gradient
         inner = QPainterPath()
-        inner.addRoundedRect(QRectF(2, 2, self.W - 4, self.H * 0.38), r - 2, r - 2)
-        grad = QLinearGradient(QPointF(0, 2), QPointF(0, self.H * 0.38))
-        grad.setColorAt(0, Pal.GLASS_INNER)
+        inner.addRoundedRect(QRectF(2, 2, self.W - 4, self.H * 0.35), r - 2, r - 2)
+        grad = QLinearGradient(QPointF(0, 2), QPointF(0, self.H * 0.35))
+        grad.setColorAt(0, QColor(255, 255, 255, 4))
         grad.setColorAt(1, QColor(255, 255, 255, 0))
         p.setBrush(QBrush(grad)); p.drawPath(inner)
 
