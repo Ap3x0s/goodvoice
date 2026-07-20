@@ -90,7 +90,8 @@ class GoodVoiceApp:
 
         if len(audio) < 1600:
             print("[REC] слишком коротко")
-            QTimer.singleShot(800, lambda: self._hud(self.hud.set_state, HudState.HIDDEN))
+            self._hud(self.hud.set_text, "Тишина")
+            QTimer.singleShot(1000, lambda: self._hud(self.hud.set_state, HudState.HIDDEN))
             return
 
         print(f"[REC] аудио: {len(audio)/16000:.1f}с, распознавание...")
@@ -107,16 +108,18 @@ class GoodVoiceApp:
                 if text and text.strip():
                     success = self.inserter.insert(text)
                     print(f"[REC] вставка: {'OK' if success else 'ОШИБКА'}")
-
-                    # Success phase — just checkmark, no text
                     self._hud(self.hud.set_state, HudState.SUCCESS)
                     time.sleep(1.2)
                     self._hud(self.hud.set_state, HudState.HIDDEN)
                 else:
+                    self._hud(self.hud.set_text, "Тишина")
+                    time.sleep(1.0)
                     self._hud(self.hud.set_state, HudState.HIDDEN)
 
             except Exception as e:
                 print(f"[REC] ошибка: {e}")
+                self._hud(self.hud.set_text, "Ошибка")
+                time.sleep(1.5)
                 self._hud(self.hud.set_state, HudState.HIDDEN)
 
         threading.Thread(target=_do_transcribe, daemon=True).start()
@@ -124,6 +127,7 @@ class GoodVoiceApp:
     def _on_record_cancel(self):
         print("[REC] отмена")
         self.recorder.stop()
+        self._hud(self.hud.set_text, "Отменено")
         self._hud(self.hud.set_state, HudState.HIDDEN)
 
     def _quit(self):
