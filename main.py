@@ -1,6 +1,6 @@
 """GoodVoice — Windows voice dictation tool.
 
-Press Left Ctrl to start dictation (hold or toggle mode).
+Press Right Ctrl to start dictation (hold or toggle mode).
 Release to transcribe and paste text into the active field.
 Press Escape to cancel without inserting.
 """
@@ -25,6 +25,7 @@ MIC_ICON = ASSETS_DIR / "mic.png"
 class GoodVoiceApp:
     def __init__(self):
         self.settings = Settings().load()
+        print(f"Settings: model={self.settings.model_size}, lang={self.settings.language}, mode={self.settings.trigger_mode}")
         self.recorder = AudioRecorder()
         self.transcriber = Transcriber(model_size=self.settings.model_size)
         self.inserter = TextInserter()
@@ -55,6 +56,7 @@ class GoodVoiceApp:
         self._running = True
 
         print("GoodVoice: готово! Нажмите Right Ctrl для записи.")
+        self.hud.show()
 
         try:
             self.hud.run()
@@ -77,22 +79,26 @@ class GoodVoiceApp:
         self.recorder.start()
         if self._root():
             self._root().after(0, lambda: self.hud.set_recording(True))
-            self._root().after(0, lambda: self.hud.update_text("\u0413\u043e\u0432\u043e\u0440\u0438\u0442\u0435..."))
             self._root().after(0, self.hud.show)
 
     def _on_record_stop(self):
         print("[REC] остановка, распознавание...")
         if self._root():
             self._root().after(0, lambda: self.hud.set_recording(False))
-            self._root().after(0, lambda: self.hud.update_text("\u0420\u0430\u0441\u043f\u043e\u0437\u043d\u0430\u0432\u0430\u043d\u0438\u0435..."))
 
         audio = self.recorder.stop()
 
         if len(audio) < 1600:
+            print("[REC] слишком коротко")
             if self._root():
-                self._root().after(0, lambda: self.hud.update_text("\u0421\u043b\u0438\u0448\u043a\u043e\u043c \u043a\u043e\u0440\u043e\u0442\u043a\u043e"))
-                self._root().after(500, self.hud.hide)
+                self._root().after(0, lambda: self.hud.update_text("Слишком коротко"))
+                self._root().after(800, lambda: self.hud.set_ready())
+                self._root().after(800, lambda: self.hud.update_text("Нажмите Right Ctrl"))
             return
+
+        print(f"[REC] аудио: {len(audio)/16000:.1f}с, распознавание...")
+        if self._root():
+            self._root().after(0, lambda: self.hud.update_text("Распознавание..."))
 
         def _do_transcribe():
             try:
@@ -101,23 +107,37 @@ class GoodVoiceApp:
                     language=self.settings.language,
                     punctuation=self.settings.punctuation,
                 )
-                if text:
-                    print(f"[REC] текст: {text}")
+                print(f"[REC] результат: '{text}'")
+
+                if text and text.strip():
+                    # Show text in HUD
                     if self._root():
                         self._root().after(0, lambda t=text: self.hud.update_text(t))
-                    self.inserter.insert(text)
-                    time.sleep(0.4)
+
+                    # Small delay then insert
+                    time.sleep(0.3)
+                    success = self.inserter.insert(text)
+                    print(f"[REC] вставка: {'OK' if success else 'ОШИБКА'}")
+
+                    if self._root():
+                        if success:
+                            self._root().after(0, lambda: self.hud.update_text("Вставлено ✓"))
+                        else:
+                            self._root().after(0, lambda: self.hud.update_text("Не удалось вставить"))
+                        self._root().after(1200, lambda: self.hud.set_ready())
+                        self._root().after(1200, lambda: self.hud.update_text("Нажмите Right Ctrl"))
                 else:
                     if self._root():
-                        self._root().after(0, lambda: self.hud.update_text("\u041d\u0438\u0447\u0435\u0433\u043e \u043d\u0435 \u0440\u0430\u0441\u043f\u043e\u0437\u043d\u0430\u043d\u043e"))
-                    time.sleep(0.6)
+                        self._root().after(0, lambda: self.hud.update_text("Ничего не распознано"))
+                        self._root().after(1000, lambda: self.hud.set_ready())
+                        self._root().after(1000, lambda: self.hud.update_text("Нажмите Right Ctrl"))
+
             except Exception as e:
                 print(f"[REC] ошибка: {e}")
                 if self._root():
-                    self._root().after(0, lambda: self.hud.update_text("\u041e\u0448\u0438\u0431\u043a\u0430"))
-                    time.sleep(0.6)
-            if self._root():
-                self._root().after(0, self.hud.hide)
+                    self._root().after(0, lambda: self.hud.update_text(f"Ошибка: {str(e)[:40]}"))
+                    self._root().after(2000, lambda: self.hud.set_ready())
+                    self._root().after(2000, lambda: self.hud.update_text("Нажмите Right Ctrl"))
 
         threading.Thread(target=_do_transcribe, daemon=True).start()
 
@@ -126,8 +146,9 @@ class GoodVoiceApp:
         self.recorder.stop()
         if self._root():
             self._root().after(0, lambda: self.hud.set_recording(False))
-            self._root().after(0, lambda: self.hud.update_text("\u041e\u0442\u043c\u0435\u043d\u0435\u043d\u043e"))
-            self._root().after(500, self.hud.hide)
+            self._root().after(0, lambda: self.hud.update_text("Отменено"))
+            self._root().after(800, lambda: self.hud.set_ready())
+            self._root().after(800, lambda: self.hud.update_text("Нажмите Right Ctrl"))
 
     def _quit(self):
         self._running = False
