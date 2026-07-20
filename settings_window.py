@@ -402,9 +402,10 @@ class SettingsWindow(QWidget):
         self._build()
 
     def _build(self):
-        self.setWindowTitle("")
+        self.setWindowTitle("GoodVoice")
         self.resize(920, 640)
         self.setMinimumSize(850, 580)
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
         self.setStyleSheet(f"""
             QWidget {{ background: {BG}; color: {T1}; font-family: "Segoe UI"; }}
             QScrollArea {{ border:none; background:transparent; }}
@@ -434,11 +435,52 @@ class SettingsWindow(QWidget):
             QPushButton#ok:pressed {{ background: {AC_H}; border-color: {AC_H}; }}
             QPushButton#danger {{ color:#EF4444; border-color:rgba(239,68,68,0.2); border-radius:0px; }}
             QPushButton#danger:hover {{ background:rgba(239,68,68,0.06); border-color:rgba(239,68,68,0.4); }}
+            QPushButton#titleBtn {{
+                background: transparent; color: {T3};
+                border: none; border-radius: 0px;
+                font-size: 14px; min-height: 32px; min-width: 46px;
+            }}
+            QPushButton#titleBtn:hover {{ background: rgba(255,255,255,0.05); color: {T1}; }}
         """)
 
-        root = QHBoxLayout(self)
+        root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
+
+        # ── Custom Title Bar ──────────────────────────────────────
+        title_bar = QFrame()
+        title_bar.setFixedHeight(32)
+        title_bar.setStyleSheet(f"background:{BG2};border-bottom:1px solid {BDR};")
+        tb_layout = QHBoxLayout(title_bar)
+        tb_layout.setContentsMargins(12, 0, 4, 0)
+        tb_layout.setSpacing(0)
+
+        # Draggable spacer
+        spacer = QLabel()
+        spacer.setStyleSheet("background:transparent;")
+        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        tb_layout.addWidget(spacer)
+
+        # Window control buttons
+        btn_actions = [
+            ("\u2500", self.showMinimized),
+            ("\u25a1", self._toggle_max),
+            ("\u2715", self.close),
+        ]
+        for btn_text, btn_action in btn_actions:
+            btn = QPushButton(btn_text)
+            btn.setObjectName("titleBtn")
+            btn.setFixedSize(46, 32)
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.clicked.connect(btn_action)
+            tb_layout.addWidget(btn)
+
+        root.addWidget(title_bar)
+
+        # ── Main content row ──────────────────────────────────────
+        content_row = QHBoxLayout()
+        content_row.setContentsMargins(0, 0, 0, 0)
+        content_row.setSpacing(0)
 
         # Sidebar
         sb = QFrame()
@@ -481,7 +523,7 @@ class SettingsWindow(QWidget):
             self._nav.append((name, b))
         sbl.addStretch()
 
-        root.addWidget(sb)
+        content_row.addWidget(sb)
 
         # Content
         ct = QFrame()
@@ -525,8 +567,23 @@ class SettingsWindow(QWidget):
         fl.addWidget(bs)
         ctl.addLayout(fl)
 
-        root.addWidget(ct, 1)
+        content_row.addWidget(ct, 1)
+        root.addLayout(content_row, 1)
         self._goto("\u041e\u0441\u043d\u043e\u0432\u043d\u044b\u0435")
+
+    def _toggle_max(self):
+        if self.isMaximized():
+            self.showNormal()
+        else:
+            self.showMaximized()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._drag_pos = event.globalPosition().toPoint() - self.pos()
+
+    def mouseMoveEvent(self, event):
+        if hasattr(self, '_drag_pos') and event.buttons() & Qt.MouseButton.LeftButton:
+            self.move(event.globalPosition().toPoint() - self._drag_pos)
 
     def _goto(self, name):
         self._title.setText(name)
