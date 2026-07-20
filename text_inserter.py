@@ -5,14 +5,14 @@ import subprocess
 
 
 class TextInserter:
-    def __init__(self, paste_delay: float = 0.15):
+    def __init__(self, paste_delay: float = 0.2):
         self.paste_delay = paste_delay
 
     def insert(self, text: str) -> bool:
         if not text:
             return False
 
-        # Method 1: pyperclip + pyautogui (most reliable)
+        # Method 1: pyperclip + Ctrl+V
         try:
             return self._insert_via_pyperclip(text)
         except Exception as e1:
@@ -36,17 +36,25 @@ class TextInserter:
         import pyperclip
         import pyautogui
 
+        # Save old clipboard
         old_clipboard = ""
         try:
             old_clipboard = pyperclip.paste()
         except Exception:
             pass
 
+        # Set clipboard
         pyperclip.copy(text)
-        time.sleep(self.paste_delay)
-        pyautogui.hotkey("ctrl", "v")
         time.sleep(0.1)
 
+        # Focus delay — let target window receive focus
+        time.sleep(self.paste_delay)
+
+        # Paste
+        pyautogui.hotkey("ctrl", "v")
+        time.sleep(0.2)
+
+        # Restore clipboard
         try:
             pyperclip.copy(old_clipboard)
         except Exception:
@@ -67,11 +75,11 @@ class TextInserter:
         )
         time.sleep(self.paste_delay)
         pyautogui.hotkey("ctrl", "v")
+        time.sleep(0.2)
         return True
 
     def _insert_via_typing(self, text: str) -> bool:
         """Type text using pyautogui.write."""
         import pyautogui
-
         pyautogui.write(text, interval=0.02)
         return True
