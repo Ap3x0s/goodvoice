@@ -247,74 +247,60 @@ class Chart(QWidget):
         p.end()
 
 
-# ── History row (minimalist: sharp, clean) ───────────────────────
+# ── History row (simplified) ─────────────────────────────────────
 
-class Row(QWidget):
+class Row(QFrame):
     def __init__(self, entry):
         super().__init__()
         self._text = entry["text"]
-        self._ts = entry["timestamp"]
-        self._wc = entry.get("word_count", len(self._text.split()))
-        self._g = 0.0
-        self._t = 0.0
         self.setFixedHeight(56)
-        self.setMouseTracking(True)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setStyleSheet(f"""
+            QFrame {{
+                background: {CARD};
+                border: 1px solid {CARD_B};
+            }}
+            QFrame:hover {{
+                border-color: rgba(0,102,255,0.3);
+            }}
+        """)
 
-    def enterEvent(self, e):
-        self._t = 1.0; self.update()
-    def leaveEvent(self, e):
-        self._t = 0.0; self.update()
-    def mousePressEvent(self, e):
-        QApplication.clipboard().setText(self._text)
-
-    def paintEvent(self, e):
-        self._g += (self._t - self._g) * 0.18
-        p = QPainter(self)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        w, h = self.width(), self.height()
-
-        # Fill
-        p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(QBrush(QColor(CARD)))
-        p.drawRect(0, 0, w, h)
-
-        # Border
-        if self._g > 0.01:
-            c = QColor(AC)
-            c.setAlpha(int(10 + self._g * 25))
-            p.setPen(QPen(c, 1))
-        else:
-            p.setPen(QPen(QColor(CARD_B), 1))
-        p.setBrush(Qt.BrushStyle.NoBrush)
-        p.drawRect(0, 0, w, h)
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(16, 0, 16, 0)
+        layout.setSpacing(12)
 
         # Time
-        ts = datetime.fromtimestamp(self._ts).strftime("%H:%M")
-        p.setPen(QColor(T3))
-        p.setFont(QFont("Consolas", 10))
-        p.drawText(QRectF(16, 14, 52, 28), Qt.AlignmentFlag.AlignCenter, ts)
+        ts = datetime.fromtimestamp(entry["timestamp"]).strftime("%H:%M")
+        time_lbl = QLabel(ts)
+        time_lbl.setFont(QFont("Consolas", 10))
+        time_lbl.setStyleSheet(f"color:{T3};background:transparent;border:none;")
+        time_lbl.setFixedWidth(52)
+        layout.addWidget(time_lbl)
 
         # Text
         txt = self._text[:80] + ("..." if len(self._text) > 80 else "")
-        p.setPen(QColor(T2))
-        p.setFont(QFont("Segoe UI", 13))
-        p.drawText(QRectF(80, 12, w - 190, 32),
-                   Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, txt)
+        text_lbl = QLabel(txt)
+        text_lbl.setFont(QFont("Segoe UI", 13))
+        text_lbl.setStyleSheet(f"color:{T2};background:transparent;border:none;")
+        text_lbl.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        layout.addWidget(text_lbl, 1)
 
         # Chip
-        chip = f"{self._wc} \u0441\u043b\u043e\u0432"
-        cr = QRectF(w - 110, 16, 76, 24)
-        p.setPen(QPen(QColor(AC, 40), 1))
-        p.setBrush(QBrush(QColor(AC, 8)))
-        p.drawRect(cr)
-        p.setPen(QColor(AC))
-        p.setFont(QFont("Consolas", 10))
-        p.drawText(cr, Qt.AlignmentFlag.AlignCenter, chip)
+        wc = entry.get("word_count", len(self._text.split()))
+        chip = QLabel(f"{wc} слов")
+        chip.setFont(QFont("Consolas", 10))
+        chip.setStyleSheet(f"""
+            color: {AC};
+            background: rgba(0,102,255,8);
+            border: 1px solid rgba(0,102,255,40);
+            padding: 4px 10px;
+        """)
+        chip.setFixedWidth(76)
+        chip.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(chip)
 
-        p.end()
-        if abs(self._g - self._t) > 0.005:
-            self.update()
+    def mousePressEvent(self, e):
+        QApplication.clipboard().setText(self._text)
 
 
 # ── KPI (minimalist: sharp, clean) ───────────────────────────────
