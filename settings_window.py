@@ -330,9 +330,39 @@ class SettingsWindow(QWidget):
             QScrollBar::add-page:vertical,QScrollBar::sub-page:vertical {{ background:none; }}
         """)
 
-        root = QHBoxLayout(self)
+        root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
+
+        # ── Custom Title Bar ──────────────────────────────────────
+        tb = QFrame()
+        tb.setFixedHeight(36)
+        tb.setStyleSheet(f"background:{BG2};border-bottom:1px solid {BDR};")
+        tb_lay = QHBoxLayout(tb)
+        tb_lay.setContentsMargins(0, 0, 0, 0)
+        tb_lay.setSpacing(0)
+
+        # Spacer (draggable area)
+        spacer = QLabel()
+        spacer.setStyleSheet("background:transparent;")
+        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        tb_lay.addWidget(spacer)
+
+        # Window buttons
+        for sym, slot in [("\u2500", self.showMinimized), ("\u25a1", self._toggle_max), ("\u2715", self.close)]:
+            b = QPushButton(sym)
+            b.setFixedSize(46, 36)
+            b.setCursor(Qt.CursorShape.PointingHandCursor)
+            b.setStyleSheet(f"QPushButton{{background:transparent;color:{T3};border:none;font-size:14px;}} QPushButton:hover{{background:rgba(255,255,255,0.05);color:{T1};}}")
+            b.clicked.connect(slot)
+            tb_lay.addWidget(b)
+
+        root.addWidget(tb)
+
+        # ── Main content row ──────────────────────────────────────
+        content_row = QHBoxLayout()
+        content_row.setContentsMargins(0, 0, 0, 0)
+        content_row.setSpacing(0)
 
         # Sidebar
         sb = QFrame()
@@ -364,7 +394,7 @@ class SettingsWindow(QWidget):
             b.clicked.connect(lambda checked, n=nm: self._goto(n))
             sbl.addWidget(b); self._nav.append((nm, b))
         sbl.addStretch()
-        root.addWidget(sb)
+        content_row.addWidget(sb)
 
         # Content
         ct = QFrame(); ct.setStyleSheet("background:transparent;border:none;")
@@ -403,8 +433,13 @@ class SettingsWindow(QWidget):
         fl.addWidget(bs)
         ctl.addLayout(fl)
 
-        root.addWidget(ct, 1)
+        content_row.addWidget(ct, 1)
+        root.addLayout(content_row, 1)
         self._goto("\u041e\u0441\u043d\u043e\u0432\u043d\u044b\u0435")
+
+    def _toggle_max(self):
+        if self.isMaximized(): self.showNormal()
+        else: self.showMaximized()
 
     def _goto(self, name):
         self._title.setText(name)
