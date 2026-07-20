@@ -66,7 +66,6 @@ class HudWidget(QWidget):
         self._rms = 0.0
         self._display_rms = 0.0
         self._phase = 0.0
-        self._orb_phase = 0.0
         self._text = ""
         self._success_flash = 0.0
         self._pulse_ring = 0.0
@@ -76,8 +75,6 @@ class HudWidget(QWidget):
         self._spr_sc.set(0.85); self._spr_sc.target = 0.85
         self._spr_glow = Spring(0.06, 0.75)
         self._spr_glow.set(0); self._spr_glow.target = 0
-
-        self._orb_morph = 0.0
 
         # Window
         self.setWindowFlags(
@@ -108,19 +105,16 @@ class HudWidget(QWidget):
             self._text = "Right Ctrl"
             self._spr_sc.target = 1.0
             self._spr_glow.target = 10.0
-            self._orb_morph = 0.0
             self.show(); self.raise_()
         elif state == HudState.RECORDING:
             self._text = ""
             self._spr_sc.target = 1.03
             self._spr_glow.target = 25.0
-            self._orb_morph = 0.0
             self.show(); self.raise_()
         elif state == HudState.THINKING:
             self._text = ""
             self._spr_sc.target = 1.0
             self._spr_glow.target = 18.0
-            self._orb_morph = 0.0
         elif state == HudState.SUCCESS:
             self._spr_sc.target = 1.06
             self._spr_glow.target = 30.0
@@ -148,9 +142,7 @@ class HudWidget(QWidget):
         if self._state == HudState.RECORDING:
             self._phase += 0.06 + self._display_rms * 0.15
         elif self._state == HudState.THINKING:
-            self._phase += 0.03
-            self._orb_phase += 0.04
-            self._orb_morph += (1.0 - self._orb_morph) * 0.04
+            self._phase += 0.035
         elif self._state == HudState.IDLE:
             self._phase += 0.015
 
@@ -188,7 +180,7 @@ class HudWidget(QWidget):
             self._draw_fluid_waves(p)
             self._draw_soft_bars(p)
         elif self._state == HudState.THINKING:
-            self._draw_glow_orb(p)
+            self._draw_think_bars(p)
         elif self._state == HudState.SUCCESS:
             self._draw_success(p)
         elif self._state == HudState.IDLE:
@@ -336,32 +328,54 @@ class HudWidget(QWidget):
             bar.addRoundedRect(QRectF(x1, y1, bw, bh), 2, 2)
             p.drawPath(bar)
 
-    # ── Glow orb (thinking) ──────────────────────────────────────
+    def _draw_think_bars(self, p):
+        """Soft bars with shimmer colors for thinking state."""
+        t = self._phase
+        n = 7
+        bw, gap = 4, 5
+        sx = 24
+        by = self.H / 2 + 2
+        mh = 16
 
-    def _draw_glow_orb(self, p):
-        t = self._orb_phase
-        m = self._orb_morph
-        cx, cy = self.W / 2, self.H / 2
-        orr = 12 + m * 10
+        for i in range(n):
+            ph = t + i * 0.6
+            wave = (
+                abs(math.sin(ph)) * 0.5
+                + abs(math.sin(ph * 1.8 + 0.5)) * 0.3
+                + abs(math.sin(ph * 0.6 + 1.5)) * 0.2
+            )
+            h = max(0.1, min(1.0, wave))
+            bh = h * mh
 
-        grad = QConicalGradient(QPointF(cx, cy), t * 360)
-        grad.setColorAt(0.0, QColor(243, 139, 168, int(180 * m)))
-        grad.setColorAt(0.33, QColor(137, 209, 250, int(160 * m)))
-        grad.setColorAt(0.66, QColor(203, 166, 247, int(180 * m)))
-        grad.setColorAt(1.0, QColor(243, 139, 168, int(180 * m)))
+            x1 = sx + i * (bw + gap)
+            y1 = by - bh
 
-        gg = QRadialGradient(QPointF(cx, cy), orr * 2)
-        gg.setColorAt(0, QColor(203, 166, 247, int(50 * m)))
-        gg.setColorAt(1, QColor(0, 0, 0, 0))
-        p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(gg))
-        p.drawEllipse(QPointF(cx, cy), orr * 2, orr * 2)
+            # Shimmer colors: violet → blue → pink cycle
+            ci = (i + int(t * 2)) % 3
+            colors = [
+                (203, 166, 247),  # violet
+                (137, 180, 250),  # blue
+                (243, 139, 168),  # pink
+            ]
+            cr, cg, cb = colors[ci]
+            a = int(140 + 60 * wave)
 
-        p.setBrush(QBrush(grad))
-        p.drawEllipse(QPointF(cx, cy), orr, orr)
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(QBrush(QColor(cr, cg, cb, a)))
+            bar = QPainterPath()
+            bar.addRoundedRect(QRectF(x1, y1, bw, bh), 2, 2)
+            p.drawPath(bar)
 
-        dr = 3 + math.sin(t * 3) * 1.5
-        p.setBrush(QBrush(QColor(255, 255, 255, int(120 * m))))
-        p.drawEllipse(QPointF(cx, cy), dr, dr)
+        # Shimmer dots
+        for i in range(3):
+            dt = (t * 1.5 + i * 1.0) % (math.pi * 2)
+            dx = self.W / 2 + math.cos(dt) * 50
+            dy = self.H / 2 + math.sin(dt) * 6
+            dr = 2 + math.sin(dt) * 1
+            da = int(100 + 60 * math.sin(dt))
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(QBrush(QColor(203, 166, 247, da)))
+            p.drawEllipse(QPointF(dx, dy), dr, dr)
 
     # ── Idle breath ──────────────────────────────────────────────
 
