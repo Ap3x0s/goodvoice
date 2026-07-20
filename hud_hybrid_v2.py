@@ -321,25 +321,17 @@ class HudWidget(QWidget):
             bar.addRoundedRect(QRectF(x1, y1, bw, bh), 2, 2)
             p.drawPath(bar)
 
-    # ── Volume meter (right side) ────────────────────────────────
+    # ── Volume circle (right side) ───────────────────────────────
 
     def _draw_vol_meter(self, p):
         rms = self._display_rms
-        mx = self.W - 40
-        mw = 6
-        mh = 36
-        my = (self.H - mh) / 2
+        cx = self.W - 32
+        cy = self.H / 2
 
-        # Background
-        bg = QPainterPath()
-        bg.addRoundedRect(QRectF(mx, my, mw, mh), 3, 3)
-        p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(QBrush(QColor(255, 255, 255, 10)))
-        p.drawPath(bg)
-
-        # Fill level
-        fill_h = max(3, rms * mh)
-        fill_y = my + mh - fill_h
+        # Base radius grows with RMS
+        base_r = 8
+        max_r = 18
+        r = base_r + rms * (max_r - base_r)
 
         # Color: green → yellow → pink
         if rms < 0.4:
@@ -359,11 +351,28 @@ class HudWidget(QWidget):
                 int(Pal.VOL_MID.blue() + (Pal.VOL_HIGH.blue() - Pal.VOL_MID.blue()) * t),
             )
 
-        fill = QPainterPath()
-        fill.addRoundedRect(QRectF(mx, fill_y, mw, fill_h), 3, 3)
+        # Outer glow
+        glow_r = r + 8 + rms * 6
+        glow = QColor(c)
+        glow.setAlpha(int(30 + rms * 40))
+        grad = QRadialGradient(QPointF(cx, cy), glow_r)
+        grad.setColorAt(0, glow)
+        grad.setColorAt(0.6, QColor(c.red(), c.green(), c.blue(), int(glow.alpha() * 0.3)))
+        grad.setColorAt(1, QColor(0, 0, 0, 0))
         p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(QBrush(c))
-        p.drawPath(fill)
+        p.setBrush(QBrush(grad))
+        p.drawEllipse(QPointF(cx, cy), glow_r, glow_r)
+
+        # Core circle
+        core_alpha = int(180 + 75 * rms)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QBrush(QColor(c.red(), c.green(), c.blue(), core_alpha)))
+        p.drawEllipse(QPointF(cx, cy), r, r)
+
+        # Bright center dot
+        dot_r = 2 + rms * 3
+        p.setBrush(QBrush(QColor(255, 255, 255, int(100 + 80 * rms))))
+        p.drawEllipse(QPointF(cx, cy), dot_r, dot_r)
 
     # ── Center info (timer + language) ───────────────────────────
 
