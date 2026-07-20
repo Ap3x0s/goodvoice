@@ -34,7 +34,9 @@ class GoodVoiceApp:
     def __init__(self):
         self._app = QApplication.instance() or QApplication(sys.argv)
         # Set app icon for taskbar and window
-        icon_path = Path(__file__).parent / "assets" / "Applogo.png"
+        icon_path = Path(__file__).parent / "assets" / "Applogo.ico"
+        if not icon_path.exists():
+            icon_path = Path(__file__).parent / "assets" / "Applogo.png"
         if icon_path.exists():
             self._app.setWindowIcon(QIcon(str(icon_path)))
 
