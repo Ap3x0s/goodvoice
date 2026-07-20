@@ -27,6 +27,8 @@ MIC_ICON = ASSETS_DIR / "mic.png"
 
 class GoodVoiceApp:
     def __init__(self):
+        self._app = QApplication.instance() or QApplication(sys.argv)
+
         self.settings = Settings().load()
         print(f"Settings: model={self.settings.model_size}, lang={self.settings.language}, mode={self.settings.trigger_mode}")
 
@@ -40,7 +42,6 @@ class GoodVoiceApp:
         )
         self.tray = TrayIcon(str(MIC_ICON))
         self._running = False
-        self._app = QApplication.instance() or QApplication(sys.argv)
 
         # Wire volume callback (called from audio thread)
         self.recorder.on_volume = self._on_volume
