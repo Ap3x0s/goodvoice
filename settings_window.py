@@ -406,7 +406,7 @@ class SettingsWindow(QWidget):
         self.resize(920, 640)
         self.setMinimumSize(850, 580)
         # Set window icon
-        icon_path = Path(__file__).parent / "assets" / "applogo.png"
+        icon_path = Path(__file__).parent / "assets" / "Applogo.png"
         if icon_path.exists():
             self.setWindowIcon(QIcon(str(icon_path)))
         self.setStyleSheet(f"""
@@ -450,10 +450,28 @@ class SettingsWindow(QWidget):
         sbl.setContentsMargins(16, 24, 16, 24)
         sbl.setSpacing(4)
 
-        logo = QLabel("GoodVoice")
-        logo.setFont(QFont("Segoe UI", 18, QFont.Weight.DemiBold))
-        logo.setStyleSheet(f"color:{T1};padding:0 4px 16px 4px;border:none;letter-spacing:0.5px;")
-        sbl.addWidget(logo)
+        # Logo with icon
+        logo_row = QHBoxLayout()
+        logo_row.setSpacing(10)
+        logo_row.setContentsMargins(0, 0, 0, 16)
+
+        logo_icon = QLabel()
+        icon_path = Path(__file__).parent / "assets" / "Applogo.png"
+        if icon_path.exists():
+            pixmap = QPixmap(str(icon_path))
+            logo_icon.setPixmap(pixmap.scaled(QSize(32, 32),
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation))
+        logo_icon.setStyleSheet("background:transparent;border:none;")
+        logo_row.addWidget(logo_icon)
+
+        logo_text = QLabel("GoodVoice")
+        logo_text.setFont(QFont("Segoe UI", 16, QFont.Weight.DemiBold))
+        logo_text.setStyleSheet(f"color:{T1};background:transparent;border:none;letter-spacing:0.5px;")
+        logo_row.addWidget(logo_text)
+        logo_row.addStretch()
+
+        sbl.addLayout(logo_row)
 
         self._nav = []
         for icon, name in [("settings", "\u041e\u0441\u043d\u043e\u0432\u043d\u044b\u0435"),
