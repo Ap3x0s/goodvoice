@@ -160,17 +160,8 @@ def combo(items, cur=None):
             border-color: {AC};
         }}
         QComboBox::drop-down {{
-            subcontrol-origin: padding;
-            subcontrol-position: top right;
-            width: 28px;
             border: none;
-            border-left: 1px solid {BDR};
-            background: transparent;
-        }}
-        QComboBox::down-arrow {{
-            width: 10px;
-            height: 10px;
-            image: none;
+            width: 24px;
         }}
         QComboBox QAbstractItemView {{
             background: #0D0D0D;
