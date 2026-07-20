@@ -49,7 +49,7 @@ class HotkeyManager:
                     self._recording = True
                     if self.on_start:
                         self.on_start()
-        elif hasattr(key, 'char') and key.char == 'p' and self._ctrl_r_held:
+        elif key == keyboard.Key.alt_r:
             if self.on_settings:
                 self.on_settings()
         elif key == keyboard.Key.esc:

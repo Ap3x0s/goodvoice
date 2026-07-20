@@ -173,11 +173,13 @@ class GoodVoiceApp:
         self._cmd("state", HudState.HIDDEN)
 
     def _open_settings(self):
+        print("[UI] opening settings...")
         from settings_window import SettingsWindow
-        if not hasattr(self, '_settings_win') or self._settings_win is None:
-            self._settings_win = SettingsWindow()
-        self._settings_win.show()
-        self._settings_win.activateWindow()
+        win = SettingsWindow()
+        win.show()
+        win.activateWindow()
+        win.raise_()
+        self._settings_win = win
 
     def _quit(self):
         self._running = False
