@@ -11,7 +11,6 @@ class Transcriber:
         self._model = None
 
     def load_model(self) -> None:
-        """Load the Whisper model (slow, do once)."""
         self._model = WhisperModel(
             self.model_size,
             device=self.device,
@@ -24,7 +23,6 @@ class Transcriber:
         language: str = "auto",
         punctuation: bool = True,
     ) -> str:
-        """Transcribe audio array to text string."""
         if self._model is None:
             raise RuntimeError("Model not loaded. Call load_model() first.")
 
@@ -44,7 +42,7 @@ class Transcriber:
 
         if not punctuation:
             import string
-            for char in string.punctuation + "—–«»…":
+            for char in string.punctuation + "\u2014\u2013\u00ab\u00bb\u2026":
                 text = text.replace(char, "")
 
         return text.strip()

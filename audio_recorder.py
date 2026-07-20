@@ -17,7 +17,6 @@ class AudioRecorder:
         self._lock = threading.Lock()
 
     def start(self) -> None:
-        """Start recording audio."""
         with self._lock:
             self._frames = []
             self._recording = True
@@ -30,13 +29,11 @@ class AudioRecorder:
         self._stream.start()
 
     def _audio_callback(self, indata, frames, time_info, status):
-        """Callback for audio stream — called on audio thread."""
         if self._recording:
             with self._lock:
                 self._frames.append(indata.copy())
 
     def stop(self) -> np.ndarray:
-        """Stop recording and return audio as numpy array."""
         with self._lock:
             self._recording = False
         if self._stream:
