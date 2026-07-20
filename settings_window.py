@@ -402,15 +402,9 @@ class SettingsWindow(QWidget):
         self._build()
 
     def _build(self):
-        self.setWindowTitle("")
+        self.setWindowTitle("GoodVoice")
         self.resize(920, 640)
         self.setMinimumSize(850, 580)
-        # Set window icon
-        icon_path = Path(__file__).parent / "assets" / "Applogo.ico"
-        if not icon_path.exists():
-            icon_path = Path(__file__).parent / "assets" / "Applogo.png"
-        if icon_path.exists():
-            self.setWindowIcon(QIcon(str(icon_path)))
         self.setStyleSheet(f"""
             QWidget {{ background: {BG}; color: {T1}; font-family: "Segoe UI"; }}
             QScrollArea {{ border:none; background:transparent; }}
@@ -425,18 +419,20 @@ class SettingsWindow(QWidget):
             QPushButton {{
                 background: transparent; color: {T2};
                 border: 1px solid {BDR}; border-radius: 0px;
-                padding: 10px 20px; font-size: 13px; font-weight: 500;
-                min-height: 40px; letter-spacing: 0.5px;
+                padding: 12px 28px; font-size: 14px; font-weight: 500;
+                min-height: 44px; letter-spacing: 1px;
             }}
             QPushButton:hover {{ border-color: rgba(0,102,255,0.3); color: {T1}; }}
             QPushButton:pressed {{ background: rgba(255,255,255,0.03); }}
             QPushButton#ok {{
-                background: {AC}; color: {T1}; border: 2px solid {AC};
-                font-weight: 600; letter-spacing: 1px; font-size: 14px;
+                background: {AC}; color: #FFFFFF;
+                border: 2px solid {AC}; border-radius: 0px;
+                font-weight: 600; font-size: 14px; letter-spacing: 1px;
+                padding: 12px 32px;
             }}
             QPushButton#ok:hover {{ background: {AC_H}; border-color: {AC_H}; }}
             QPushButton#ok:pressed {{ background: {AC_H}; border-color: {AC_H}; }}
-            QPushButton#danger {{ color:#EF4444; border-color:rgba(239,68,68,0.2); }}
+            QPushButton#danger {{ color:#EF4444; border-color:rgba(239,68,68,0.2); border-radius:0px; }}
             QPushButton#danger:hover {{ background:rgba(239,68,68,0.06); border-color:rgba(239,68,68,0.4); }}
         """)
 
