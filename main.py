@@ -136,20 +136,26 @@ class GoodVoiceApp:
                 print(f"[REC] результат: '{text}'")
 
                 if text and text.strip():
+                    # Show recognized text for 1.5 seconds
                     self._hud_update(text=text)
-                    time.sleep(0.3)
+                    time.sleep(1.5)
+
+                    # Insert text
                     success = self.inserter.insert(text)
                     print(f"[REC] вставка: {'OK' if success else 'ОШИБКА'}")
 
+                    # Show success for 1.5 seconds
                     if success:
                         self._hud_update(state=HudState.SUCCESS, text="Вставлено")
                     else:
                         self._hud_update(state=HudState.SUCCESS, text="Ошибка вставки")
                     time.sleep(1.5)
+
+                    # Hide
                     self._hud_update(state=HudState.HIDDEN)
                 else:
                     self._hud_update(text="Тишина")
-                    time.sleep(0.8)
+                    time.sleep(1.0)
                     self._hud_update(state=HudState.HIDDEN)
 
             except Exception as e:
