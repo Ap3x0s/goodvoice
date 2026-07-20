@@ -7,7 +7,7 @@ from pathlib import Path
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
     QPushButton, QMessageBox, QApplication, QFrame,
-    QStackedWidget, QScrollArea, QSizePolicy, QToolTip
+    QStackedWidget, QScrollArea, QSizePolicy, QToolTip, QMenu
 )
 from PyQt6.QtCore import Qt, QRectF, QPointF, QSize
 from PyQt6.QtGui import (
@@ -134,55 +134,69 @@ class Switch(QWidget):
 
 # ── Styled Combo ─────────────────────────────────────────────────
 
-def combo(items, cur=None):
-    c = QComboBox()
-    c.addItems(items)
-    if cur and cur in items: c.setCurrentText(cur)
-    c.setFixedWidth(160)
-    c.setFixedHeight(36)
-    c.setCursor(Qt.CursorShape.PointingHandCursor)
-    c.setStyleSheet(f"""
-        QComboBox {{
-            background: {CARD};
-            color: {T1};
-            border: 1px solid {BDR};
-            border-radius: 0px;
-            padding: 6px 10px;
-            font-size: 13px;
-            font-family: "Segoe UI";
-        }}
-        QComboBox:hover {{
-            border-color: rgba(0,102,255,0.3);
-        }}
-        QComboBox:focus {{
-            border-color: {AC};
-        }}
-        QComboBox::drop-down {{
-            subcontrol-origin: padding;
-            subcontrol-position: top right;
-            width: 20px;
-            border: none;
-            border-left: 1px solid {BDR};
-            background: transparent;
-        }}
-        QComboBox::down-arrow {{
-            width: 8px;
-            height: 8px;
-        }}
-        QComboBox QAbstractItemView {{
-            background: {CARD};
-            color: {T1};
-            border: 1px solid {BDR};
-            selection-background-color: rgba(0,102,255,0.15);
-            selection-color: {T1};
-            outline: none;
-        }}
-        QComboBox QAbstractItemView::item {{
-            padding: 6px 10px;
-            min-height: 28px;
-        }}
-    """)
-    return c
+# ── Dropdown Button (replaces QComboBox for reliable arrows) ──────
+
+class DropDown(QPushButton):
+    """Custom dropdown with visible arrow and menu."""
+    valueChanged = None  # callback: (str) -> None
+
+    def __init__(self, items, current=None):
+        super().__init__()
+        self._items = items
+        self._current = current or items[0] if items else ""
+        self.setText(f"  {self._current}  \u25be")
+        self.setFixedWidth(160)
+        self.setFixedHeight(36)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setStyleSheet(f"""
+            QPushButton {{
+                background: {CARD};
+                color: {T1};
+                border: 1px solid {BDR};
+                border-radius: 0px;
+                padding: 6px 10px;
+                font-size: 13px;
+                font-family: "Segoe UI";
+                text-align: left;
+            }}
+            QPushButton:hover {{
+                border-color: rgba(0,102,255,0.3);
+            }}
+        """)
+        self.clicked.connect(self._show_menu)
+
+    def _show_menu(self):
+        menu = QMenu(self)
+        menu.setStyleSheet(f"""
+            QMenu {{
+                background: {CARD};
+                color: {T1};
+                border: 1px solid {BDR};
+                padding: 4px;
+            }}
+            QMenu::item {{
+                padding: 8px 16px;
+            }}
+            QMenu::item:selected {{
+                background: rgba(0,102,255,0.15);
+            }}
+        """)
+        for item in self._items:
+            action = menu.addAction(item)
+            action.triggered.connect(lambda checked, v=item: self._select(v))
+        menu.exec(self.mapToGlobal(self.rect().bottomLeft()))
+
+    def _select(self, value):
+        self._current = value
+        self.setText(f"  {value}  \u25be")
+        if self.valueChanged:
+            self.valueChanged(value)
+
+    def currentText(self):
+        return self._current
+
+    def currentIndex(self):
+        return self._items.index(self._current) if self._current in self._items else 0
 
 
 # ── Nav ──────────────────────────────────────────────────────────
@@ -536,7 +550,7 @@ class SettingsWindow(QWidget):
             d.setStyleSheet(f"color:{T3};background:transparent;border:none;")
             col.addWidget(d)
             fl.addLayout(col, 1)
-            cb = combo(items, cur)
+            cb = DropDown(items, cur)
             fl.addWidget(cb)
             self._c.append(cb)
             lay.addWidget(f)
@@ -583,12 +597,14 @@ class SettingsWindow(QWidget):
         filter_row.addWidget(filter_lbl)
         filter_row.addStretch()
 
-        self._filter = combo(
-            ["\u041d\u0435\u0434\u0435\u043b\u044f", "2 \u043d\u0435\u0434\u0435\u043b\u0438",
-             "\u041c\u0435\u0441\u044f\u0446", "3 \u043c\u0435\u0441\u044f\u0446\u0430"],
-            "\u041d\u0435\u0434\u0435\u043b\u044f")
-        self._filter.setFixedWidth(140)
-        self._filter.currentIndexChanged.connect(self._update_stat)
+        self._filter = DropDown(
+            ["\u0417\u0430 \u0432\u0441\u0451 \u0432\u0440\u0435\u043c\u044f",
+             "1 \u043d\u0435\u0434\u0435\u043b\u044f", "2 \u043d\u0435\u0434\u0435\u043b\u0438",
+             "3 \u043d\u0435\u0434\u0435\u043b\u0438", "4 \u043d\u0435\u0434\u0435\u043b\u0438",
+             "5 \u043d\u0435\u0434\u0435\u043b\u044c", "6 \u043d\u0435\u0434\u0435\u043b\u044c"],
+            "\u0417\u0430 \u0432\u0441\u0451 \u0432\u0440\u0435\u043c\u044f")
+        self._filter.setFixedWidth(160)
+        self._filter.valueChanged = lambda v: self._update_stat()
         filter_row.addWidget(self._filter)
         lay.addLayout(filter_row)
 
@@ -630,16 +646,28 @@ class SettingsWindow(QWidget):
 
     def _update_stat(self):
         """Update KPI and chart based on selected time filter."""
-        filter_idx = self._filter.currentIndex() if hasattr(self, '_filter') else 0
-        days_map = {0: 7, 1: 14, 2: 30, 3: 90}
-        days = days_map.get(filter_idx, 7)
-        cutoff = datetime.now() - timedelta(days=days)
+        filter_text = self._filter.currentText() if hasattr(self, '_filter') else "\u0417\u0430 \u0432\u0441\u0451 \u0432\u0440\u0435\u043c\u044f"
+
+        days_map = {
+            "\u0417\u0430 \u0432\u0441\u0451 \u0432\u0440\u0435\u043c\u044f": 0,
+            "1 \u043d\u0435\u0434\u0435\u043b\u044f": 7,
+            "2 \u043d\u0435\u0434\u0435\u043b\u0438": 14,
+            "3 \u043d\u0435\u0434\u0435\u043b\u0438": 21,
+            "4 \u043d\u0435\u0434\u0435\u043b\u0438": 28,
+            "5 \u043d\u0435\u0434\u0435\u043b\u044c": 35,
+            "6 \u043d\u0435\u0434\u0435\u043b\u044c": 42,
+        }
+        days = days_map.get(filter_text, 0)
 
         st = self.stats
 
-        # Filter sessions by period
-        filtered = [s for s in st.sessions
-                   if datetime.fromtimestamp(s["timestamp"]) >= cutoff]
+        if days == 0:
+            # All time — use totals
+            filtered = st.sessions
+        else:
+            cutoff = datetime.now() - timedelta(days=days)
+            filtered = [s for s in st.sessions
+                       if datetime.fromtimestamp(s["timestamp"]) >= cutoff]
 
         # Calculate filtered stats
         total_sessions = len(filtered)
@@ -668,14 +696,21 @@ class SettingsWindow(QWidget):
                 day = datetime.fromtimestamp(s["timestamp"]).strftime("%d.%m")
                 daily[day] += s.get("word_count", 0)
 
-            today = datetime.now()
-            chart_days = []
-            for i in range(days - 1, -1, -1):
-                d = today - timedelta(days=i)
-                key = d.strftime("%d.%m")
-                lbl = ["\u041f\u043d", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442",
-                       "\u041f\u0442", "\u0421\u0431", "\u0412\u0441"][d.weekday()]
-                chart_days.append((lbl, daily.get(key, 0), d.strftime("%d %B")))
+            if days == 0:
+                # All time — show all unique days
+                all_days = sorted(daily.keys())
+                chart_days = []
+                for key in all_days:
+                    chart_days.append(("", daily.get(key, 0), key))
+            else:
+                today = datetime.now()
+                chart_days = []
+                for i in range(days - 1, -1, -1):
+                    d = today - timedelta(days=i)
+                    key = d.strftime("%d.%m")
+                    lbl = ["\u041f\u043d", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442",
+                           "\u041f\u0442", "\u0421\u0431", "\u0412\u0441"][d.weekday()]
+                    chart_days.append((lbl, daily.get(key, 0), d.strftime("%d %B")))
 
             self._chart.data = chart_days
             self._chart.update()
