@@ -147,7 +147,7 @@ def combo(items, cur=None):
             color: {T1};
             border: 1px solid {BDR};
             border-radius: 0px;
-            padding: 6px 28px 6px 10px;
+            padding: 6px 10px;
             font-size: 13px;
             font-family: "Segoe UI";
         }}
@@ -160,13 +160,14 @@ def combo(items, cur=None):
         QComboBox::drop-down {{
             subcontrol-origin: padding;
             subcontrol-position: top right;
-            width: 24px;
+            width: 20px;
             border: none;
             border-left: 1px solid {BDR};
+            background: transparent;
         }}
         QComboBox::down-arrow {{
-            width: 10px;
-            height: 10px;
+            width: 8px;
+            height: 8px;
         }}
         QComboBox QAbstractItemView {{
             background: {CARD};
@@ -573,45 +574,46 @@ class SettingsWindow(QWidget):
         lay.setSpacing(12)
 
         st = self.stats
-        row = QHBoxLayout()
-        row.setSpacing(12)
-        for val, lbl in [
-            (str(st.total_sessions), "\u0421\u0435\u0441\u0441\u0438\u0439"),
-            (f"{st.total_words:,}", "\u0421\u043b\u043e\u0432"),
-            (f"{st.total_chars:,}", "\u0421\u0438\u043c\u0432\u043e\u043b\u043e\u0432"),
-            (f"{st.avg_words:.0f}", "\u0421\u043b\u043e\u0432/\u0441\u0435\u0441\u0441\u0438\u044f"),
-        ]:
-            row.addWidget(KPI(val, lbl))
-        lay.addLayout(row)
 
+        # Filter row
+        filter_row = QHBoxLayout()
+        filter_lbl = QLabel("\u041f\u0435\u0440\u0438\u043e\u0434:")
+        filter_lbl.setFont(QFont("Consolas", 11))
+        filter_lbl.setStyleSheet(f"color:{T3};background:transparent;border:none;letter-spacing:1px;")
+        filter_row.addWidget(filter_lbl)
+        filter_row.addStretch()
+
+        self._filter = combo(
+            ["\u041d\u0435\u0434\u0435\u043b\u044f", "2 \u043d\u0435\u0434\u0435\u043b\u0438",
+             "\u041c\u0435\u0441\u044f\u0446", "3 \u043c\u0435\u0441\u044f\u0446\u0430"],
+            "\u041d\u0435\u0434\u0435\u043b\u044f")
+        self._filter.setFixedWidth(140)
+        self._filter.currentIndexChanged.connect(self._update_stat)
+        filter_row.addWidget(self._filter)
+        lay.addLayout(filter_row)
+
+        # KPI row
+        self._kpi_row = QHBoxLayout()
+        self._kpi_row.setSpacing(12)
+        lay.addLayout(self._kpi_row)
+
+        # Chart card
+        self._chart_card = None
         if st.sessions:
-            f = Card()
-            f.setMinimumHeight(240)
-            fl = QVBoxLayout(f)
-            fl.setContentsMargins(20, 16, 20, 12)
-            fl.setSpacing(4)
+            self._chart_card = Card()
+            self._chart_card.setMinimumHeight(240)
+            chart_fl = QVBoxLayout(self._chart_card)
+            chart_fl.setContentsMargins(20, 16, 20, 12)
+            chart_fl.setSpacing(4)
             t = QLabel("\u0410\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c \u043f\u043e \u0434\u043d\u044f\u043c")
             t.setFont(QFont("Consolas", 11))
             t.setStyleSheet(f"color:{T3};background:transparent;border:none;letter-spacing:1px;")
-            fl.addWidget(t)
+            chart_fl.addWidget(t)
 
-            daily = defaultdict(int)
-            for s in st.sessions:
-                day = datetime.fromtimestamp(s["timestamp"]).strftime("%d.%m")
-                daily[day] += s.get("word_count", 0)
-
-            today = datetime.now()
-            days = []
-            for i in range(13, -1, -1):
-                d = today - timedelta(days=i)
-                key = d.strftime("%d.%m")
-                lbl = ["\u041f\u043d", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041f\u0442", "\u0421\u0431", "\u0412\u0441"][d.weekday()]
-                days.append((lbl, daily.get(key, 0), d.strftime("%d %B")))
-
-            chart = Chart(days)
-            chart.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-            fl.addWidget(chart, 1)
-            lay.addWidget(f, 1)
+            self._chart = Chart([])
+            self._chart.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            chart_fl.addWidget(self._chart, 1)
+            lay.addWidget(self._chart_card, 1)
         else:
             lbl = QLabel("\u041f\u043e\u043a\u0430 \u043d\u0435\u0442 \u0434\u0430\u043d\u043d\u044b\u0445")
             lbl.setFont(QFont("Segoe UI", 13))
@@ -621,7 +623,62 @@ class SettingsWindow(QWidget):
 
         lay.addStretch()
         sa.setWidget(c)
+
+        # Initial update
+        self._update_stat()
         return sa
+
+    def _update_stat(self):
+        """Update KPI and chart based on selected time filter."""
+        filter_idx = self._filter.currentIndex() if hasattr(self, '_filter') else 0
+        days_map = {0: 7, 1: 14, 2: 30, 3: 90}
+        days = days_map.get(filter_idx, 7)
+        cutoff = datetime.now() - timedelta(days=days)
+
+        st = self.stats
+
+        # Filter sessions by period
+        filtered = [s for s in st.sessions
+                   if datetime.fromtimestamp(s["timestamp"]) >= cutoff]
+
+        # Calculate filtered stats
+        total_sessions = len(filtered)
+        total_words = sum(s.get("word_count", 0) for s in filtered)
+        total_chars = sum(s.get("char_count", 0) for s in filtered)
+        avg_words = total_words / max(1, total_sessions)
+
+        # Update KPI row
+        while self._kpi_row.count():
+            item = self._kpi_row.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        for val, lbl in [
+            (str(total_sessions), "\u0421\u0435\u0441\u0441\u0438\u0439"),
+            (f"{total_words:,}", "\u0421\u043b\u043e\u0432"),
+            (f"{total_chars:,}", "\u0421\u0438\u043c\u0432\u043e\u043b\u043e\u0432"),
+            (f"{avg_words:.0f}", "\u0421\u043b\u043e\u0432/\u0441\u0435\u0441\u0441\u0438\u044f"),
+        ]:
+            self._kpi_row.addWidget(KPI(val, lbl))
+
+        # Update chart
+        if hasattr(self, '_chart') and self._chart:
+            daily = defaultdict(int)
+            for s in filtered:
+                day = datetime.fromtimestamp(s["timestamp"]).strftime("%d.%m")
+                daily[day] += s.get("word_count", 0)
+
+            today = datetime.now()
+            chart_days = []
+            for i in range(days - 1, -1, -1):
+                d = today - timedelta(days=i)
+                key = d.strftime("%d.%m")
+                lbl = ["\u041f\u043d", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442",
+                       "\u041f\u0442", "\u0421\u0431", "\u0412\u0441"][d.weekday()]
+                chart_days.append((lbl, daily.get(key, 0), d.strftime("%d %B")))
+
+            self._chart.data = chart_days
+            self._chart.update()
 
     def _pg_hist(self):
         sa = QScrollArea()
