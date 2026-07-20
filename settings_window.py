@@ -138,8 +138,8 @@ def combo(items, cur=None):
     c = QComboBox()
     c.addItems(items)
     if cur and cur in items: c.setCurrentText(cur)
-    c.setFixedWidth(180)
-    c.setFixedHeight(40)
+    c.setFixedWidth(160)
+    c.setFixedHeight(36)
     c.setCursor(Qt.CursorShape.PointingHandCursor)
     c.setStyleSheet(f"""
         QComboBox {{
@@ -147,28 +147,26 @@ def combo(items, cur=None):
             color: {T1};
             border: 1px solid {BDR};
             border-radius: 0px;
-            padding: 8px 12px;
+            padding: 6px 28px 6px 10px;
             font-size: 13px;
             font-family: "Segoe UI";
-            min-height: 40px;
         }}
         QComboBox:hover {{
             border-color: rgba(0,102,255,0.3);
-            background: rgba(255,255,255,0.03);
         }}
         QComboBox:focus {{
             border-color: {AC};
         }}
         QComboBox::drop-down {{
             subcontrol-origin: padding;
-            subcontrol-position: center right;
-            width: 28px;
+            subcontrol-position: top right;
+            width: 24px;
             border: none;
+            border-left: 1px solid {BDR};
         }}
         QComboBox::down-arrow {{
-            image: none;
-            width: 0px;
-            height: 0px;
+            width: 10px;
+            height: 10px;
         }}
         QComboBox QAbstractItemView {{
             background: {CARD};
@@ -176,19 +174,11 @@ def combo(items, cur=None):
             border: 1px solid {BDR};
             selection-background-color: rgba(0,102,255,0.15);
             selection-color: {T1};
-            border-radius: 0px;
-            padding: 4px;
             outline: none;
         }}
         QComboBox QAbstractItemView::item {{
-            padding: 8px 12px;
-            min-height: 32px;
-        }}
-        QComboBox QAbstractItemView::item:hover {{
-            background: rgba(0,102,255,0.1);
-        }}
-        QComboBox QAbstractItemView::item:selected {{
-            background: rgba(0,102,255,0.15);
+            padding: 6px 10px;
+            min-height: 28px;
         }}
     """)
     return c
