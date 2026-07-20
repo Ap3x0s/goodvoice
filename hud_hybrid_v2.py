@@ -106,13 +106,13 @@ class HudWidget(QWidget):
             self._text = "Right Ctrl"
             self._spr_sc.target = 1.0
             self._spr_glow.target = 10.0
-            self.show(); self.raise_()
+            self.show()
         elif state == HudState.RECORDING:
             self._text = ""
             self._spr_sc.target = 1.03
             self._spr_glow.target = 25.0
             self._rec_start = time.time()
-            self.show(); self.raise_()
+            self.show()
         elif state == HudState.THINKING:
             self._text = ""
             self._spr_sc.target = 1.0

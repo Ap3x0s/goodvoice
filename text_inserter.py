@@ -5,12 +5,15 @@ import subprocess
 
 
 class TextInserter:
-    def __init__(self, paste_delay: float = 0.3):
+    def __init__(self, paste_delay: float = 0.5):
         self.paste_delay = paste_delay
 
     def insert(self, text: str) -> bool:
         if not text:
             return False
+
+        # Give target window time to receive focus
+        time.sleep(0.2)
 
         # Method 1: PowerShell clipboard + Ctrl+V
         try:

@@ -8,6 +8,7 @@ Press Escape to cancel without inserting.
 import sys
 import threading
 import time
+import queue
 from pathlib import Path
 
 from PyQt6.QtWidgets import QApplication
@@ -43,10 +44,36 @@ class GoodVoiceApp:
         self.tray = TrayIcon(str(MIC_ICON))
         self._running = False
 
-        self.recorder.on_volume = self._on_volume
+        # Thread-safe command queue
+        self._q = queue.Queue()
 
-    def _on_volume(self, rms: float):
-        QTimer.singleShot(0, lambda r=rms: self.hud.set_rms(r))
+        self.recorder.on_volume = lambda rms: self._q.put(("rms", rms))
+
+    def _cmd(self, *args):
+        """Put a command in the queue (thread-safe)."""
+        self._q.put(args)
+
+    def _process_queue(self):
+        """Process all queued commands on the main thread."""
+        while not self._q.empty():
+            try:
+                cmd = self._q.get_nowait()
+                action = cmd[0]
+
+                if action == "rms":
+                    self.hud.set_rms(cmd[1])
+                elif action == "state":
+                    self.hud.set_state(cmd[1])
+                elif action == "text":
+                    self.hud.set_text(cmd[1])
+                elif action == "lang":
+                    self.hud.set_language(cmd[1])
+                elif action == "show":
+                    self.hud.show()
+                elif action == "hide":
+                    self.hud.hide()
+            except queue.Empty:
+                break
 
     def start(self):
         print("GoodVoice: загрузка модели...")
@@ -57,41 +84,44 @@ class GoodVoiceApp:
         self.hotkey.on_stop = self._on_record_stop
         self.hotkey.on_cancel = self._on_record_cancel
 
-        self.tray.on_show = lambda: QTimer.singleShot(0, self.hud.show)
-        self.tray.on_hide = lambda: QTimer.singleShot(0, self.hud.hide)
+        self.tray.on_show = lambda: self._cmd("show")
+        self.tray.on_hide = lambda: self._cmd("hide")
         self.tray.on_quit = self._quit
 
         self.hotkey.start()
         self.tray.start()
         self._running = True
 
+        # Poll queue at 60fps
+        self._poll = QTimer()
+        self._poll.timeout.connect(self._process_queue)
+        self._poll.start(16)
+
         print("GoodVoice: готово! Нажмите Right Ctrl для записи.")
-        self.hud.set_state(HudState.IDLE)
+        self._cmd("state", HudState.IDLE)
+        self._process_queue()
 
         sys.exit(self._app.exec())
-
-    def _hud(self, func, *args, **kwargs):
-        """Call HUD method on main thread."""
-        QTimer.singleShot(0, lambda: func(*args, **kwargs))
 
     def _on_record_start(self):
         print("[REC] запись...")
         self.recorder.start()
         lang = self.settings.language.upper() if self.settings.language != "auto" else "AUTO"
-        self._hud(self.hud.set_state, HudState.RECORDING)
-        self._hud(self.hud.set_text, "")
-        self._hud(self.hud.set_language, lang)
+        self._cmd("state", HudState.RECORDING)
+        self._cmd("text", "")
+        self._cmd("lang", lang)
 
     def _on_record_stop(self):
         print("[REC] остановка...")
-        self._hud(self.hud.set_state, HudState.THINKING)
+        self._cmd("state", HudState.THINKING)
 
         audio = self.recorder.stop()
 
         if len(audio) < 1600:
             print("[REC] слишком коротко")
-            self._hud(self.hud.set_text, "Тишина")
-            QTimer.singleShot(1000, lambda: self._hud(self.hud.set_state, HudState.HIDDEN))
+            self._cmd("text", "Тишина")
+            time.sleep(1.0)
+            self._cmd("state", HudState.HIDDEN)
             return
 
         print(f"[REC] аудио: {len(audio)/16000:.1f}с, распознавание...")
@@ -108,27 +138,28 @@ class GoodVoiceApp:
                 if text and text.strip():
                     success = self.inserter.insert(text)
                     print(f"[REC] вставка: {'OK' if success else 'ОШИБКА'}")
-                    self._hud(self.hud.set_state, HudState.SUCCESS)
+                    self._cmd("state", HudState.SUCCESS)
                     time.sleep(1.2)
-                    self._hud(self.hud.set_state, HudState.HIDDEN)
+                    self._cmd("state", HudState.HIDDEN)
                 else:
-                    self._hud(self.hud.set_text, "Тишина")
+                    self._cmd("text", "Тишина")
                     time.sleep(1.0)
-                    self._hud(self.hud.set_state, HudState.HIDDEN)
+                    self._cmd("state", HudState.HIDDEN)
 
             except Exception as e:
                 print(f"[REC] ошибка: {e}")
-                self._hud(self.hud.set_text, "Ошибка")
+                self._cmd("text", "Ошибка")
                 time.sleep(1.5)
-                self._hud(self.hud.set_state, HudState.HIDDEN)
+                self._cmd("state", HudState.HIDDEN)
 
         threading.Thread(target=_do_transcribe, daemon=True).start()
 
     def _on_record_cancel(self):
         print("[REC] отмена")
         self.recorder.stop()
-        self._hud(self.hud.set_text, "Отменено")
-        self._hud(self.hud.set_state, HudState.HIDDEN)
+        self._cmd("text", "Отменено")
+        time.sleep(0.8)
+        self._cmd("state", HudState.HIDDEN)
 
     def _quit(self):
         self._running = False
