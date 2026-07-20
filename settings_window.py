@@ -402,7 +402,7 @@ class SettingsWindow(QWidget):
         self._build()
 
     def _build(self):
-        self.setWindowTitle("GoodVoice")
+        self.setWindowTitle("")
         self.resize(920, 640)
         self.setMinimumSize(850, 580)
         # Set window icon
@@ -432,7 +432,7 @@ class SettingsWindow(QWidget):
             QPushButton:pressed {{ background: rgba(255,255,255,0.03); }}
             QPushButton#ok {{
                 background: {AC}; color: {T1}; border: 2px solid {AC};
-                font-weight: 600; letter-spacing: 1px;
+                font-weight: 600; letter-spacing: 1px; font-size: 14px;
             }}
             QPushButton#ok:hover {{ background: {AC_H}; border-color: {AC_H}; }}
             QPushButton#ok:pressed {{ background: {AC_H}; border-color: {AC_H}; }}
@@ -452,7 +452,7 @@ class SettingsWindow(QWidget):
         sbl.setContentsMargins(16, 24, 16, 24)
         sbl.setSpacing(4)
 
-        # Logo with icon
+        # Logo with icon (1.5x bigger)
         logo_row = QHBoxLayout()
         logo_row.setSpacing(10)
         logo_row.setContentsMargins(0, 0, 0, 16)
@@ -461,7 +461,7 @@ class SettingsWindow(QWidget):
         icon_path = Path(__file__).parent / "assets" / "Applogo.png"
         if icon_path.exists():
             pixmap = QPixmap(str(icon_path))
-            logo_icon.setPixmap(pixmap.scaled(QSize(32, 32),
+            logo_icon.setPixmap(pixmap.scaled(QSize(48, 48),
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation))
         logo_icon.setStyleSheet("background:transparent;border:none;")
