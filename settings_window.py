@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
     QPushButton, QMessageBox, QApplication, QFrame,
     QStackedWidget, QScrollArea, QSizePolicy, QToolTip
 )
-from PyQt6.QtCore import Qt, QRectF, QPointF, QSize
+from PyQt6.QtCore import Qt, QRectF, QPointF, QSize, QTimer
 from PyQt6.QtGui import (
     QFont, QColor, QPainter, QLinearGradient, QPen, QBrush,
     QRadialGradient, QPainterPath, QPixmap, QIcon
@@ -320,6 +320,7 @@ class SettingsWindow(QWidget):
         self.setWindowTitle("GoodVoice")
         self.resize(920, 640)
         self.setMinimumSize(850, 580)
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
         self.setStyleSheet(f"""
             QWidget {{ background: {BG}; color: {T1}; font-family: {FN}; }}
             QScrollArea {{ border:none; background:transparent; }}
@@ -347,7 +348,7 @@ class SettingsWindow(QWidget):
         li = QLabel()
         ip = Path(__file__).parent / "assets" / "Applogo.png"
         if ip.exists():
-            px = QPixmap(str(ip)).scaled(QSize(48,48), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            px = QPixmap(str(ip)).scaled(QSize(60,60), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
             li.setPixmap(px)
         li.setStyleSheet("background:transparent;border:none;")
         lr.addWidget(li)
