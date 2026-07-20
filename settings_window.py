@@ -424,16 +424,16 @@ class SettingsWindow(QWidget):
                 background: transparent; color: {T2};
                 border: 1px solid {BDR}; border-radius: 0px;
                 padding: 10px 20px; font-size: 13px; font-weight: 500;
-                min-height: 44px; min-width: 44px; letter-spacing: 0.5px;
+                min-height: 40px; letter-spacing: 0.5px;
             }}
             QPushButton:hover {{ border-color: rgba(0,102,255,0.3); color: {T1}; }}
             QPushButton:pressed {{ background: rgba(255,255,255,0.03); }}
             QPushButton#ok {{
-                background: {AC}; color: {T1}; border: none;
-                font-weight: 600; min-width: 120px; letter-spacing: 1px;
+                background: {AC}; color: {T1}; border: 2px solid {AC};
+                font-weight: 600; letter-spacing: 1px;
             }}
-            QPushButton#ok:hover {{ background: {AC_H}; }}
-            QPushButton#ok:pressed {{ background: {AC_H}; }}
+            QPushButton#ok:hover {{ background: {AC_H}; border-color: {AC_H}; }}
+            QPushButton#ok:pressed {{ background: {AC_H}; border-color: {AC_H}; }}
             QPushButton#danger {{ color:#EF4444; border-color:rgba(239,68,68,0.2); }}
             QPushButton#danger:hover {{ background:rgba(239,68,68,0.06); border-color:rgba(239,68,68,0.4); }}
         """)
@@ -508,13 +508,21 @@ class SettingsWindow(QWidget):
         line.setStyleSheet(f"background:{BDR};border:none;margin:12px 0;")
         ctl.addWidget(line)
 
+        # Footer buttons
         fl = QHBoxLayout()
+        fl.setContentsMargins(0, 16, 0, 0)
         fl.addStretch()
+
         bc = QPushButton("\u0417\u0430\u043a\u0440\u044b\u0442\u044c")
+        bc.setFixedHeight(40)
+        bc.setFixedWidth(120)
         bc.clicked.connect(self.close)
         fl.addWidget(bc)
+
         bs = QPushButton("\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c")
         bs.setObjectName("ok")
+        bs.setFixedHeight(40)
+        bs.setFixedWidth(140)
         bs.clicked.connect(self._save)
         fl.addWidget(bs)
         ctl.addLayout(fl)
