@@ -15,6 +15,8 @@ from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QTimer
 
 from settings import Settings
+from stats import Stats
+from history import History
 from audio_recorder import AudioRecorder
 from transcriber import Transcriber
 from text_inserter import TextInserter
@@ -43,6 +45,9 @@ class GoodVoiceApp:
         )
         self.tray = TrayIcon(str(MIC_ICON))
         self._running = False
+        self.stats = Stats().load()
+        self.history = History().load()
+        self._rec_start = 0.0
 
         # Thread-safe command queue
         self._q = queue.Queue()
@@ -86,6 +91,7 @@ class GoodVoiceApp:
 
         self.tray.on_show = lambda: self._cmd("show")
         self.tray.on_hide = lambda: self._cmd("hide")
+        self.tray.on_settings = self._open_settings
         self.tray.on_quit = self._quit
 
         self.hotkey.start()
@@ -105,6 +111,7 @@ class GoodVoiceApp:
 
     def _on_record_start(self):
         print("[REC] запись...")
+        self._rec_start = time.time()
         self.recorder.start()
         lang = self.settings.language.upper() if self.settings.language != "auto" else "AUTO"
         self._cmd("state", HudState.RECORDING)
@@ -136,6 +143,9 @@ class GoodVoiceApp:
                 print(f"[REC] результат: '{text}'")
 
                 if text and text.strip():
+                    duration = time.time() - self._rec_start
+                    self.stats.add_session(text, duration)
+                    self.history.add(text)
                     success = self.inserter.insert(text)
                     print(f"[REC] вставка: {'OK' if success else 'ОШИБКА'}")
                     self._cmd("state", HudState.SUCCESS)
@@ -160,6 +170,11 @@ class GoodVoiceApp:
         self._cmd("text", "Отменено")
         time.sleep(0.8)
         self._cmd("state", HudState.HIDDEN)
+
+    def _open_settings(self):
+        from settings_window import SettingsWindow
+        self._settings_win = SettingsWindow()
+        self._settings_win.show()
 
     def _quit(self):
         self._running = False
