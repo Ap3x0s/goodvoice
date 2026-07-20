@@ -21,8 +21,6 @@ class TrayIcon:
         image = Image.open(self._icon_path)
         menu = pystray.Menu(
             pystray.MenuItem("Показать/Скрыть", self._toggle_hud, default=True),
-            pystray.MenuItem("Настройки", self._open_settings),
-            pystray.Menu.SEPARATOR,
             pystray.MenuItem("Выход", self._quit),
         )
         self._icon = pystray.Icon("GoodVoice", image, "GoodVoice", menu)

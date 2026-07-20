@@ -92,8 +92,7 @@ class GoodVoiceApp:
 
         self.tray.on_show = lambda: self._cmd("show")
         self.tray.on_hide = lambda: self._cmd("hide")
-        self.tray.on_settings = lambda: QTimer.singleShot(0, self._open_settings)
-        self.tray.on_quit = lambda: QTimer.singleShot(0, self._quit)
+        self.tray.on_quit = lambda: self._app.quit()
 
         self.hotkey.start()
         self.tray.start()
