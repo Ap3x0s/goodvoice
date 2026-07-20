@@ -18,7 +18,7 @@ from audio_recorder import AudioRecorder
 from transcriber import Transcriber
 from text_inserter import TextInserter
 from hotkey_manager import HotkeyManager, TriggerMode
-from hud_window import HudWidget, HudState
+from hud_window import create_hud, HudState
 from tray_icon import TrayIcon
 
 ASSETS_DIR = Path(__file__).parent / "assets"
@@ -33,7 +33,8 @@ class GoodVoiceApp:
         self.recorder = AudioRecorder()
         self.transcriber = Transcriber(model_size=self.settings.model_size)
         self.inserter = TextInserter()
-        self.hud = HudWidget()
+        self.hud = create_hud(self.settings.hud_theme)
+        print(f"HUD theme: {self.settings.hud_theme}")
         self.hotkey = HotkeyManager(
             mode=TriggerMode(self.settings.trigger_mode)
         )

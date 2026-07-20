@@ -17,6 +17,7 @@ class Settings:
     hud_position: str = "center"  # "center" or "cursor"
     autostart: bool = False
     hotkey: str = "ctrl_r"
+    hud_theme: str = "google"  # "google" or "vercel"
 
     def load(self) -> "Settings":
         """Load settings from JSON file, create with defaults if missing."""
