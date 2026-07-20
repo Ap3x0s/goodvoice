@@ -30,4 +30,4 @@ def create_hud(theme: str = "google"):
     return THEMES.get(theme, GoogleHud)()
 
 
-HudWidget = GoogleHud
+HudWidget = THEMES["hybrid_v2"]
