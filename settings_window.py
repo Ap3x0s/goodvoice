@@ -24,10 +24,23 @@ from history import History
 ICONS_DIR = Path(__file__).parent / "assets" / "icons"
 
 def load_icon(name, size=20):
+    """Load SVG icon and tint it white."""
     path = ICONS_DIR / f"{name}.svg"
     if path.exists():
         pixmap = QPixmap(str(path))
-        return pixmap.scaled(QSize(size, size), Qt.AspectRatioMode.KeepAspectRatio,
+        # Tint white
+        tinted = pixmap.copy()
+        tinted.fill(QColor(255, 255, 255, 200))
+        # Create colored version
+        colored = QPixmap(pixmap.size())
+        colored.fill(QColor(0, 0, 0, 0))
+        painter = QPainter(colored)
+        painter.setOpacity(0.9)
+        painter.drawPixmap(0, 0, pixmap)
+        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+        painter.fillRect(colored.rect(), QColor(255, 255, 255))
+        painter.end()
+        return colored.scaled(QSize(size, size), Qt.AspectRatioMode.KeepAspectRatio,
                            Qt.TransformationMode.SmoothTransformation)
     return QPixmap()
 
@@ -134,7 +147,7 @@ def combo(items, cur=None):
             color: {T1};
             border: 1px solid {BDR};
             border-radius: 0px;
-            padding: 8px 32px 8px 12px;
+            padding: 8px 12px;
             font-size: 13px;
             font-family: "Segoe UI";
             min-height: 40px;
@@ -147,14 +160,15 @@ def combo(items, cur=None):
             border-color: {AC};
         }}
         QComboBox::drop-down {{
-            border: none;
-            width: 32px;
+            subcontrol-origin: padding;
             subcontrol-position: center right;
+            width: 28px;
+            border: none;
         }}
         QComboBox::down-arrow {{
             image: none;
-            width: 12px;
-            height: 12px;
+            width: 0px;
+            height: 0px;
         }}
         QComboBox QAbstractItemView {{
             background: {CARD};
