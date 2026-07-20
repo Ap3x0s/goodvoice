@@ -48,7 +48,7 @@ class HotkeyManager:
                     self._recording = True
                     if self.on_start:
                         self.on_start()
-        elif key in (keyboard.Key.alt_r, keyboard.Key.alt_l):
+        elif key in (keyboard.Key.alt_r,):
             self._alt_r_held = True
         elif hasattr(key, 'char') and key.char == 'p' and self._alt_r_held:
             if self.on_settings:
@@ -60,7 +60,7 @@ class HotkeyManager:
                     self.on_cancel()
 
     def _on_release(self, key):
-        if key in (keyboard.Key.alt_r, keyboard.Key.alt_l):
+        if key in (keyboard.Key.alt_r,):
             self._alt_r_held = False
         if key == keyboard.Key.ctrl_r and self.mode == TriggerMode.HOLD:
             if self._recording:

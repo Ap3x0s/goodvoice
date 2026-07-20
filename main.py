@@ -50,6 +50,7 @@ class GoodVoiceApp:
         self.history = History().load()
         self._rec_start = 0.0
         self._settings_win = None
+        self._hud_visible = True
 
         self._q = queue.Queue()
         self.recorder.on_volume = lambda rms: self._q.put(("rms", rms))
@@ -111,6 +112,18 @@ class GoodVoiceApp:
         sys.exit(self._app.exec())
 
     def _process_commands(self):
+        # Check tray commands
+        tray_cmd = self.tray.get_command()
+        if tray_cmd == "toggle_hud":
+            self._cmd("show" if not self._hud_visible else "hide")
+            self._hud_visible = not self._hud_visible
+        elif tray_cmd == "open_settings":
+            self._open_settings()
+        elif tray_cmd == "quit":
+            self._quit()
+            return
+
+        # Check internal queue
         while not self._q.empty():
             try:
                 cmd = self._q.get_nowait()
@@ -118,8 +131,8 @@ class GoodVoiceApp:
                     self._open_settings()
                 elif cmd[0] == "quit":
                     self._quit()
+                    return
                 else:
-                    # Put non-command items back
                     self._q.put(cmd)
                     break
             except queue.Empty:
