@@ -97,7 +97,7 @@ class Switch(QWidget):
         super().__init__()
         self._on = on
         self._p = 1.0 if on else 0.0
-        self.setFixedSize(48, 28)
+        self.setFixedSize(60, 32)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
@@ -109,25 +109,25 @@ class Switch(QWidget):
 
     def paintEvent(self, e):
         tgt = 1.0 if self._on else 0.0
-        self._p += (tgt - self._p) * 0.2
+        self._p += (tgt - self._p) * 0.15
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         if self._on:
             p.setPen(Qt.PenStyle.NoPen)
             p.setBrush(QBrush(QColor(AC)))
-            p.drawRect(0, 0, 48, 28)
+            p.drawRect(0, 0, 60, 32)
         else:
             p.setPen(QPen(QColor(T2), 1))
             p.setBrush(Qt.BrushStyle.NoBrush)
-            p.drawRect(0, 0, 48, 28)
-        x = 3 + self._p * 20
+            p.drawRect(0, 0, 60, 32)
+        x = 4 + self._p * 28
         p.setPen(Qt.PenStyle.NoPen)
         p.setBrush(QBrush(QColor(T1)))
-        p.drawRect(int(x), 4, 20, 20)
+        p.drawRect(int(x), 4, 24, 24)
         if self.hasFocus():
             p.setPen(QPen(QColor(AC), 2))
             p.setBrush(Qt.BrushStyle.NoBrush)
-            p.drawRect(-2, -2, 52, 32)
+            p.drawRect(-2, -2, 64, 36)
         p.end()
         if abs(self._p - tgt) > 0.01: self.update()
 
@@ -167,6 +167,7 @@ def combo(items, cur=None):
             background: #0D0D0D;
             color: {T1};
             border: 1px solid rgba(0,102,255,0.2);
+            border-radius: 0px;
             selection-background-color: rgba(0,102,255,0.12);
             selection-color: {T1};
             outline: none;
