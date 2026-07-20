@@ -134,69 +134,45 @@ class Switch(QWidget):
 
 # ── Styled Combo ─────────────────────────────────────────────────
 
-# ── Dropdown Button (replaces QComboBox for reliable arrows) ──────
+# ── Combo ────────────────────────────────────────────────────────
 
-class DropDown(QPushButton):
-    """Custom dropdown with visible arrow and menu."""
-    valueChanged = None  # callback: (str) -> None
-
-    def __init__(self, items, current=None):
-        super().__init__()
-        self._items = items
-        self._current = current or items[0] if items else ""
-        self.setText(f"  {self._current}  \u25be")
-        self.setFixedWidth(160)
-        self.setFixedHeight(36)
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setStyleSheet(f"""
-            QPushButton {{
-                background: {CARD};
-                color: {T1};
-                border: 1px solid {BDR};
-                border-radius: 0px;
-                padding: 6px 10px;
-                font-size: 13px;
-                font-family: "Segoe UI";
-                text-align: left;
-            }}
-            QPushButton:hover {{
-                border-color: rgba(0,102,255,0.3);
-            }}
-        """)
-        self.clicked.connect(self._show_menu)
-
-    def _show_menu(self):
-        menu = QMenu(self)
-        menu.setStyleSheet(f"""
-            QMenu {{
-                background: {CARD};
-                color: {T1};
-                border: 1px solid {BDR};
-                padding: 4px;
-            }}
-            QMenu::item {{
-                padding: 8px 16px;
-            }}
-            QMenu::item:selected {{
-                background: rgba(0,102,255,0.15);
-            }}
-        """)
-        for item in self._items:
-            action = menu.addAction(item)
-            action.triggered.connect(lambda checked, v=item: self._select(v))
-        menu.exec(self.mapToGlobal(self.rect().bottomLeft()))
-
-    def _select(self, value):
-        self._current = value
-        self.setText(f"  {value}  \u25be")
-        if self.valueChanged:
-            self.valueChanged(value)
-
-    def currentText(self):
-        return self._current
-
-    def currentIndex(self):
-        return self._items.index(self._current) if self._current in self._items else 0
+def combo(items, cur=None):
+    c = QComboBox()
+    c.addItems(items)
+    if cur and cur in items: c.setCurrentText(cur)
+    c.setFixedWidth(160)
+    c.setFixedHeight(36)
+    c.setCursor(Qt.CursorShape.PointingHandCursor)
+    c.setStyleSheet(f"""
+        QComboBox {{
+            background: {CARD};
+            color: {T1};
+            border: 1px solid {BDR};
+            border-radius: 0px;
+            padding: 6px 10px;
+            font-size: 13px;
+            font-family: "Segoe UI";
+        }}
+        QComboBox:hover {{
+            border-color: rgba(0,102,255,0.3);
+        }}
+        QComboBox:focus {{
+            border-color: {AC};
+        }}
+        QComboBox QAbstractItemView {{
+            background: {CARD};
+            color: {T1};
+            border: 1px solid {BDR};
+            selection-background-color: rgba(0,102,255,0.15);
+            selection-color: {T1};
+            outline: none;
+        }}
+        QComboBox QAbstractItemView::item {{
+            padding: 6px 10px;
+            min-height: 28px;
+        }}
+    """)
+    return c
 
 
 # ── Nav ──────────────────────────────────────────────────────────
@@ -550,7 +526,7 @@ class SettingsWindow(QWidget):
             d.setStyleSheet(f"color:{T3};background:transparent;border:none;")
             col.addWidget(d)
             fl.addLayout(col, 1)
-            cb = DropDown(items, cur)
+            cb = combo(items, cur)
             fl.addWidget(cb)
             self._c.append(cb)
             lay.addWidget(f)
@@ -597,14 +573,14 @@ class SettingsWindow(QWidget):
         filter_row.addWidget(filter_lbl)
         filter_row.addStretch()
 
-        self._filter = DropDown(
+        self._filter = combo(
             ["\u0417\u0430 \u0432\u0441\u0451 \u0432\u0440\u0435\u043c\u044f",
              "1 \u043d\u0435\u0434\u0435\u043b\u044f", "2 \u043d\u0435\u0434\u0435\u043b\u0438",
              "3 \u043d\u0435\u0434\u0435\u043b\u0438", "4 \u043d\u0435\u0434\u0435\u043b\u0438",
              "5 \u043d\u0435\u0434\u0435\u043b\u044c", "6 \u043d\u0435\u0434\u0435\u043b\u044c"],
             "\u0417\u0430 \u0432\u0441\u0451 \u0432\u0440\u0435\u043c\u044f")
         self._filter.setFixedWidth(160)
-        self._filter.valueChanged = lambda v: self._update_stat()
+        self._filter.currentIndexChanged.connect(self._update_stat)
         filter_row.addWidget(self._filter)
         lay.addLayout(filter_row)
 
