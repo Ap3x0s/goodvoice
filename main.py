@@ -85,14 +85,12 @@ class GoodVoiceApp:
     def _on_record_stop(self):
         print("[REC] остановка...")
         self._hud(self.hud.set_state, HudState.THINKING)
-        self._hud(self.hud.set_text, "Распознавание...")
 
         audio = self.recorder.stop()
 
         if len(audio) < 1600:
             print("[REC] слишком коротко")
-            self._hud(self.hud.set_text, "Тишина")
-            QTimer.singleShot(1000, lambda: self._hud(self.hud.set_state, HudState.HIDDEN))
+            QTimer.singleShot(800, lambda: self._hud(self.hud.set_state, HudState.HIDDEN))
             return
 
         print(f"[REC] аудио: {len(audio)/16000:.1f}с, распознавание...")
@@ -107,42 +105,26 @@ class GoodVoiceApp:
                 print(f"[REC] результат: '{text}'")
 
                 if text and text.strip():
-                    # Show recognized text
-                    self._hud(self.hud.set_text, text)
-                    time.sleep(1.5)
-
-                    # Insert
                     success = self.inserter.insert(text)
                     print(f"[REC] вставка: {'OK' if success else 'ОШИБКА'}")
 
-                    # Show success
+                    # Success phase — just checkmark, no text
                     self._hud(self.hud.set_state, HudState.SUCCESS)
-                    if success:
-                        self._hud(self.hud.set_text, "Вставлено")
-                    else:
-                        self._hud(self.hud.set_text, "Ошибка")
-                    time.sleep(1.5)
-
-                    # Hide
+                    time.sleep(1.2)
                     self._hud(self.hud.set_state, HudState.HIDDEN)
                 else:
-                    self._hud(self.hud.set_text, "Тишина")
-                    time.sleep(1.0)
                     self._hud(self.hud.set_state, HudState.HIDDEN)
 
             except Exception as e:
                 print(f"[REC] ошибка: {e}")
-                self._hud(self.hud.set_text, "Ошибка")
-                QTimer.singleShot(1500, lambda: self._hud(self.hud.set_state, HudState.HIDDEN))
+                self._hud(self.hud.set_state, HudState.HIDDEN)
 
         threading.Thread(target=_do_transcribe, daemon=True).start()
 
     def _on_record_cancel(self):
         print("[REC] отмена")
         self.recorder.stop()
-        self._hud(self.hud.set_state, HudState.SUCCESS)
-        self._hud(self.hud.set_text, "Отменено")
-        QTimer.singleShot(800, lambda: self._hud(self.hud.set_state, HudState.HIDDEN))
+        self._hud(self.hud.set_state, HudState.HIDDEN)
 
     def _quit(self):
         self._running = False
