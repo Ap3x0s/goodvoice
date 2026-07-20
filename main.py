@@ -14,6 +14,7 @@ from pathlib import Path
 
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QTimer
+from PyQt6.QtGui import QIcon
 
 from settings import Settings
 from stats import Stats
@@ -32,6 +33,10 @@ MIC_ICON = ASSETS_DIR / "mic.png"
 class GoodVoiceApp:
     def __init__(self):
         self._app = QApplication.instance() or QApplication(sys.argv)
+        # Set app icon for taskbar and window
+        icon_path = Path(__file__).parent / "assets" / "icon.png"
+        if icon_path.exists():
+            self._app.setWindowIcon(QIcon(str(icon_path)))
 
         self.settings = Settings().load()
         print(f"Settings: model={self.settings.model_size}, lang={self.settings.language}, mode={self.settings.trigger_mode}")

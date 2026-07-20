@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
     QPushButton, QMessageBox, QApplication, QFrame,
     QStackedWidget, QScrollArea, QSizePolicy, QToolTip, QMenu
 )
-from PyQt6.QtCore import Qt, QRectF, QPointF, QSize
+from PyQt6.QtCore import Qt, QRectF, QPointF, QSize, QTimer
 from PyQt6.QtGui import (
     QFont, QColor, QPainter, QLinearGradient, QPen, QBrush,
     QRadialGradient, QPainterPath, QPixmap, QIcon
@@ -100,16 +100,31 @@ class Switch(QWidget):
         self.setFixedSize(60, 32)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        # Animation timer
+        self._anim = QTimer()
+        self._anim.timeout.connect(self._animate)
+        self._anim.setInterval(16)  # ~60fps
 
     def isChecked(self): return self._on
-    def mousePressEvent(self, e): self._on = not self._on; self.update()
+    def mousePressEvent(self, e): self._on = not self._on; self._start_anim()
     def keyPressEvent(self, e):
         if e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Space):
-            self._on = not self._on; self.update()
+            self._on = not self._on; self._start_anim()
 
-    def paintEvent(self, e):
+    def _start_anim(self):
+        if not self._anim.isActive():
+            self._anim.start()
+
+    def _animate(self):
         tgt = 1.0 if self._on else 0.0
         self._p += (tgt - self._p) * 0.15
+        self.update()
+        if abs(self._p - tgt) < 0.01:
+            self._p = tgt
+            self._anim.stop()
+            self.update()
+
+    def paintEvent(self, e):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         if self._on:
@@ -129,7 +144,6 @@ class Switch(QWidget):
             p.setBrush(Qt.BrushStyle.NoBrush)
             p.drawRect(-2, -2, 64, 36)
         p.end()
-        if abs(self._p - tgt) > 0.01: self.update()
 
 
 # ── Styled Combo ─────────────────────────────────────────────────
@@ -391,6 +405,10 @@ class SettingsWindow(QWidget):
         self.setWindowTitle("GoodVoice")
         self.resize(920, 640)
         self.setMinimumSize(850, 580)
+        # Set window icon
+        icon_path = Path(__file__).parent / "assets" / "icon.png"
+        if icon_path.exists():
+            self.setWindowIcon(QIcon(str(icon_path)))
         self.setStyleSheet(f"""
             QWidget {{ background: {BG}; color: {T1}; font-family: "Segoe UI"; }}
             QScrollArea {{ border:none; background:transparent; }}
