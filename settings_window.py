@@ -406,7 +406,7 @@ class SettingsWindow(QWidget):
         self.resize(920, 640)
         self.setMinimumSize(850, 580)
         # Set window icon
-        icon_path = Path(__file__).parent / "assets" / "icon.png"
+        icon_path = Path(__file__).parent / "assets" / "applogo.png"
         if icon_path.exists():
             self.setWindowIcon(QIcon(str(icon_path)))
         self.setStyleSheet(f"""

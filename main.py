@@ -34,7 +34,7 @@ class GoodVoiceApp:
     def __init__(self):
         self._app = QApplication.instance() or QApplication(sys.argv)
         # Set app icon for taskbar and window
-        icon_path = Path(__file__).parent / "assets" / "icon.png"
+        icon_path = Path(__file__).parent / "assets" / "applogo.png"
         if icon_path.exists():
             self._app.setWindowIcon(QIcon(str(icon_path)))
 
@@ -49,7 +49,7 @@ class GoodVoiceApp:
         self.hotkey = HotkeyManager(
             mode=TriggerMode(self.settings.trigger_mode)
         )
-        self.tray = TrayIcon(str(MIC_ICON))
+        self.tray = TrayIcon(str(ASSETS_DIR / "applogo.png"))
         self._running = False
         self.stats = Stats().load()
         self.history = History().load()
