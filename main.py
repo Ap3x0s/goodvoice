@@ -37,11 +37,14 @@ class GoodVoiceApp:
         self._running = False
 
     def start(self):
+        self.hud.create()
+        self.hud.show()
+        self.hud.set_recording(False)
+        self.hud.update_text("Загрузка модели...")
+
         print("GoodVoice: загрузка модели...")
         self.transcriber.load_model()
         print("GoodVoice: модель загружена.")
-
-        self.hud.create()
 
         self.hotkey.on_start = self._on_record_start
         self.hotkey.on_stop = self._on_record_stop
@@ -56,7 +59,8 @@ class GoodVoiceApp:
         self._running = True
 
         print("GoodVoice: готово! Нажмите Right Ctrl для записи.")
-        self.hud.show()
+        self.hud.set_ready()
+        self.hud.update_text("Нажмите Right Ctrl")
 
         try:
             self.hud.run()
