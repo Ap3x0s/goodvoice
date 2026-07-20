@@ -1,23 +1,32 @@
-"""Floating HUD — modern animated capsule design like SuperDictate."""
+"""Floating HUD — SuperDictate-inspired minimalist capsule."""
 
 import customtkinter as ctk
 import math
-import threading
 
 
 class HUDWindow:
+    """Small animated pill that shows dictation status and result."""
+
+    W = 320
+    H = 56
+    RADIUS = 28  # half-height = perfect pill
+    BG = "#181825"
+    BG_RECORDING = "#1e1e2e"
+    TEXT_DIM = "#6c7086"
+    TEXT_NORMAL = "#cdd6f4"
+    TEXT_BRIGHT = "#f5e0dc"
+    ACCENT = "#f38ba8"      # pink
+    ACCENT2 = "#fab387"     # peach
+    ACCENT3 = "#a6e3a1"     # green
+
     def __init__(self):
         self._root = None
         self._canvas = None
-        self._text_label = None
-        self._status_label = None
+        self._text_var = None
         self._visible = False
         self._recording = False
-        self._pulse_angle = 0.0
-        self._wave_angles = [0.0, 0.8, 1.6, 2.4, 3.2]
+        self._wave_phase = 0.0
         self._anim_id = None
-        self._W = 420
-        self._H = 80
 
     def create(self) -> None:
         ctk.set_appearance_mode("dark")
@@ -25,89 +34,44 @@ class HUDWindow:
 
         self._root = ctk.CTk()
         self._root.title("GoodVoice")
-        self._root.geometry(f"{self._W}x{self._H}")
+        self._root.geometry(f"{self.W}x{self.H}")
         self._root.attributes("-topmost", True)
         self._root.overrideredirect(True)
-        self._root.configure(fg_color="#11111b")
+        self._root.configure(fg_color="black")
         self._root.resizable(False, False)
 
-        # Main canvas for drawing
+        # Canvas for custom drawing
         self._canvas = ctk.CTkCanvas(
             self._root,
-            width=self._W,
-            height=self._H,
+            width=self.W,
+            height=self.H,
             highlightthickness=0,
-            bg="#11111b",
+            bg="black",
         )
         self._canvas.pack(fill="both", expand=True)
 
-        # Draw rounded pill background
-        self._draw_pill()
+        # Text variable
+        self._text_var = ctk.StringVar(value="Right Ctrl")
 
-        # Status text (left side)
-        self._status_label = ctk.CTkLabel(
-            self._root,
-            text="\u25cf  Готов",
-            font=ctk.CTkFont(family="Segoe UI Semibold", size=13),
-            text_color="#585b70",
-            anchor="w",
-        )
-        self._status_label.place(x=58, y=12)
-
-        # Main text (center)
+        # Text label
         self._text_label = ctk.CTkLabel(
             self._root,
-            text="Нажмите Right Ctrl",
+            textvariable=self._text_var,
             font=ctk.CTkFont(family="Segoe UI", size=14),
-            text_color="#bac2de",
-            anchor="w",
+            text_color=self.TEXT_NORMAL,
         )
-        self._text_label.place(x=58, y=38)
+        self._text_label.place(relx=0.5, rely=0.5, anchor="center")
 
-        # Center-bottom on screen
+        # Position: bottom center
         self._root.update_idletasks()
         sw = self._root.winfo_screenwidth()
         sh = self._root.winfo_screenheight()
-        x = (sw - self._W) // 2
-        y = sh - 140
-        self._root.geometry(f"{self._W}x{self._H}+{x}+{y}")
+        x = (sw - self.W) // 2
+        y = sh - 100
+        self._root.geometry(f"{self.W}x{self.H}+{x}+{y}")
 
         self._root.withdraw()
         self._root.update()
-
-    def _draw_pill(self) -> None:
-        """Draw rounded rectangle pill background."""
-        c = self._canvas
-        w, h = self._W, self._H
-        r = 20  # corner radius
-        # Pill outline glow
-        for i in range(3):
-            offset = i
-            color = "#1e1e2e" if i == 0 else "#181825" if i == 1 else "#11111b"
-            c.create_arc(
-                offset, offset, r * 2 + offset, h - offset,
-                start=90, extent=90, fill=color, outline="", style="pieslice"
-            )
-            c.create_arc(
-                w - r * 2 - offset, offset, w - offset, h - offset,
-                start=0, extent=90, fill=color, outline="", style="pieslice"
-            )
-            c.create_arc(
-                offset, offset, r * 2 + offset, h - offset,
-                start=90, extent=90, fill=color, outline="", style="pieslice"
-            )
-            c.create_arc(
-                w - r * 2 - offset, offset, w - offset, h - offset,
-                start=0, extent=90, fill=color, outline="", style="pieslice"
-            )
-            c.create_rectangle(
-                r + offset, offset, w - r - offset, h - offset,
-                fill=color, outline=""
-            )
-            c.create_rectangle(
-                offset, r + offset, w - offset, h - r - offset,
-                fill=color, outline=""
-            )
 
     def show(self) -> None:
         if self._root and not self._visible:
@@ -115,7 +79,6 @@ class HUDWindow:
             try:
                 self._root.deiconify()
                 self._root.lift()
-                self._root.focus_force()
                 self._root.update()
             except Exception:
                 pass
@@ -131,9 +94,9 @@ class HUDWindow:
                 pass
 
     def update_text(self, text: str) -> None:
-        if self._text_label:
+        if self._text_var:
             try:
-                self._text_label.configure(text=text)
+                self._text_var.set(text)
                 self._root.update()
             except Exception:
                 pass
@@ -141,35 +104,35 @@ class HUDWindow:
     def set_recording(self, recording: bool) -> None:
         self._recording = recording
         if recording:
-            self._pulse_angle = 0.0
-            self._wave_angles = [0.0, 0.8, 1.6, 2.4, 3.2]
-            if self._status_label:
-                self._status_label.configure(
-                    text="\u25cf  Запись",
-                    text_color="#f38ba8"
-                )
-            if self._text_label:
-                self._text_label.configure(text="Говорите...")
+            self._wave_phase = 0.0
+            self._text_label.configure(text_color=self.ACCENT)
             self._start_anim()
         else:
             self._stop_anim()
-            if self._status_label:
-                self._status_label.configure(
-                    text="\u25cf  Обработка",
-                    text_color="#fab387"
-                )
+            self._text_label.configure(text_color=self.TEXT_NORMAL)
+            self._draw_pill(self.BG)
 
     def set_ready(self) -> None:
         self._stop_anim()
-        if self._status_label:
-            self._status_label.configure(
-                text="\u25cf  Готов",
-                text_color="#585b70"
-            )
+        if self._text_label:
+            self._text_label.configure(text_color=self.TEXT_DIM)
 
-    # --- Animation loop ---
+    # --- Pill drawing ---
+
+    def _draw_pill(self, bg_color: str) -> None:
+        c = self._canvas
+        c.delete("pill")
+        w, h, r = self.W, self.H, self.RADIUS
+
+        # Filled pill
+        c.create_oval(0, 0, r * 2, h, fill=bg_color, outline="", tags="pill")
+        c.create_oval(w - r * 2, 0, w, h, fill=bg_color, outline="", tags="pill")
+        c.create_rectangle(r, 0, w - r, h, fill=bg_color, outline="", tags="pill")
+
+    # --- Animation ---
 
     def _start_anim(self) -> None:
+        self._draw_pill(self.BG_RECORDING)
         self._anim_tick()
 
     def _stop_anim(self) -> None:
@@ -185,54 +148,39 @@ class HUDWindow:
         if not self._recording or not self._root:
             return
 
-        self._pulse_angle += 0.12
-        for i in range(len(self._wave_angles)):
-            self._wave_angles[i] += 0.18 + i * 0.04
+        self._wave_phase += 0.2
+        self._draw_wave()
+        self._anim_id = self._root.after(33, self._anim_tick)
 
-        # Draw wave bars on canvas
-        try:
-            self._draw_wave_bars()
-        except Exception:
-            pass
-
-        self._anim_id = self._root.after(33, self._anim_tick)  # ~30fps
-
-    def _draw_wave_bars(self) -> None:
-        """Draw animated equalizer bars."""
+    def _draw_wave(self) -> None:
         c = self._canvas
-        # Delete old bars
         c.delete("wave")
 
-        num_bars = 5
-        bar_w = 6
-        gap = 5
-        total_w = num_bars * bar_w + (num_bars - 1) * gap
-        start_x = 18
-        base_y = self._H // 2 + 10
-        max_h = 28
+        num = 5
+        bar_w = 4
+        gap = 4
+        start_x = 20
+        base_y = self.H // 2 + 8
+        max_h = 18
 
-        for i in range(num_bars):
-            angle = self._wave_angles[i]
-            # Combine multiple sine waves for organic look
-            h = abs(math.sin(angle)) * 0.6 + abs(math.sin(angle * 2.3)) * 0.25 + abs(math.sin(angle * 0.7)) * 0.15
-            bar_h = max(4, int(h * max_h))
+        for i in range(num):
+            phase = self._wave_phase + i * 0.7
+            h = abs(math.sin(phase)) * 0.7 + abs(math.sin(phase * 1.8)) * 0.3
+            bar_h = max(3, int(h * max_h))
 
             x1 = start_x + i * (bar_w + gap)
             y1 = base_y - bar_h
             x2 = x1 + bar_w
             y2 = base_y
 
-            # Color gradient from pink to mauve
-            progress = h
-            r = int(243 * progress + 166 * (1 - progress))
-            g = int(139 * progress + 139 * (1 - progress))
-            b = int(248 * progress + 229 * (1 - progress))
+            # Color: pink with varying intensity
+            intensity = 0.5 + 0.5 * h
+            r = int(243 * intensity + 100 * (1 - intensity))
+            g = int(139 * intensity + 80 * (1 - intensity))
+            b = int(248 * intensity + 120 * (1 - intensity))
             color = f"#{r:02x}{g:02x}{b:02x}"
 
-            c.create_rectangle(
-                x1, y1, x2, y2,
-                fill=color, outline="", tags="wave"
-            )
+            c.create_rectangle(x1, y1, x2, y2, fill=color, outline="", tags="wave")
 
     def run(self) -> None:
         if self._root:
