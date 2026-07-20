@@ -46,8 +46,8 @@ class GoodVoiceApp:
         self.hotkey.on_stop = self._on_record_stop
         self.hotkey.on_cancel = self._on_record_cancel
 
-        self.tray.on_show = self.hud.show
-        self.tray.on_hide = self.hud.hide
+        self.tray.on_show = self._hud_show
+        self.tray.on_hide = self._hud_hide
         self.tray.on_quit = self._quit
 
         self.hotkey.start()
@@ -61,51 +61,73 @@ class GoodVoiceApp:
         except KeyboardInterrupt:
             self._quit()
 
+    def _hud_show(self):
+        if self._root():
+            self._root().after(0, self.hud.show)
+
+    def _hud_hide(self):
+        if self._root():
+            self._root().after(0, self.hud.hide)
+
+    def _root(self):
+        return self.hud._root
+
     def _on_record_start(self):
         print("[REC] запись...")
         self.recorder.start()
-        self.hud.set_recording(True)
-        self.hud.update_text("Говорите...")
-        self.hud.show()
+        if self._root():
+            self._root().after(0, lambda: self.hud.set_recording(True))
+            self._root().after(0, lambda: self.hud.update_text("\u0413\u043e\u0432\u043e\u0440\u0438\u0442\u0435..."))
+            self._root().after(0, self.hud.show)
 
     def _on_record_stop(self):
         print("[REC] остановка, распознавание...")
-        self.hud.set_recording(False)
-        self.hud.update_text("Распознавание...")
+        if self._root():
+            self._root().after(0, lambda: self.hud.set_recording(False))
+            self._root().after(0, lambda: self.hud.update_text("\u0420\u0430\u0441\u043f\u043e\u0437\u043d\u0430\u0432\u0430\u043d\u0438\u0435..."))
 
         audio = self.recorder.stop()
 
         if len(audio) < 1600:
-            self.hud.update_text("Слишком коротко")
-            time.sleep(0.5)
-            self.hud.hide()
+            if self._root():
+                self._root().after(0, lambda: self.hud.update_text("\u0421\u043b\u0438\u0448\u043a\u043e\u043c \u043a\u043e\u0440\u043e\u0442\u043a\u043e"))
+                self._root().after(500, self.hud.hide)
             return
 
         def _do_transcribe():
-            text = self.transcriber.transcribe(
-                audio,
-                language=self.settings.language,
-                punctuation=self.settings.punctuation,
-            )
-            if text:
-                print(f"[REC] текст: {text}")
-                self.hud.update_text(text)
-                self.inserter.insert(text)
-                time.sleep(0.3)
-            else:
-                self.hud.update_text("Ничего не распознано")
-                time.sleep(0.5)
-            self.hud.hide()
+            try:
+                text = self.transcriber.transcribe(
+                    audio,
+                    language=self.settings.language,
+                    punctuation=self.settings.punctuation,
+                )
+                if text:
+                    print(f"[REC] текст: {text}")
+                    if self._root():
+                        self._root().after(0, lambda t=text: self.hud.update_text(t))
+                    self.inserter.insert(text)
+                    time.sleep(0.4)
+                else:
+                    if self._root():
+                        self._root().after(0, lambda: self.hud.update_text("\u041d\u0438\u0447\u0435\u0433\u043e \u043d\u0435 \u0440\u0430\u0441\u043f\u043e\u0437\u043d\u0430\u043d\u043e"))
+                    time.sleep(0.6)
+            except Exception as e:
+                print(f"[REC] ошибка: {e}")
+                if self._root():
+                    self._root().after(0, lambda: self.hud.update_text("\u041e\u0448\u0438\u0431\u043a\u0430"))
+                    time.sleep(0.6)
+            if self._root():
+                self._root().after(0, self.hud.hide)
 
         threading.Thread(target=_do_transcribe, daemon=True).start()
 
     def _on_record_cancel(self):
         print("[REC] отмена")
         self.recorder.stop()
-        self.hud.set_recording(False)
-        self.hud.update_text("Отменено")
-        time.sleep(0.5)
-        self.hud.hide()
+        if self._root():
+            self._root().after(0, lambda: self.hud.set_recording(False))
+            self._root().after(0, lambda: self.hud.update_text("\u041e\u0442\u043c\u0435\u043d\u0435\u043d\u043e"))
+            self._root().after(500, self.hud.hide)
 
     def _quit(self):
         self._running = False
