@@ -189,7 +189,7 @@ class Chart(QWidget):
             self.update()
             if 0 <= i < len(self.data):
                 l, v, d = self.data[i]
-                QToolTip.showText(e.globalPos(), f"{d}: {v} \u0441\u043b\u043e\u0432", self)
+                QToolTip.showText(e.globalPosition().toPoint(), f"{d}: {v} \u0441\u043b\u043e\u0432", self)
             else:
                 QToolTip.hideText()
 
@@ -422,8 +422,8 @@ class SettingsWindow(QWidget):
         sbl.setSpacing(4)
 
         logo = QLabel("GoodVoice")
-        logo.setFont(QFont("Segoe UI", 18, QFont.Weight.Light))
-        logo.setStyleSheet(f"color:{T1};padding:0 4px 16px 4px;border:none;letter-spacing:1px;")
+        logo.setFont(QFont("Segoe UI", 18, QFont.Weight.DemiBold))
+        logo.setStyleSheet(f"color:{T1};padding:0 4px 16px 4px;border:none;letter-spacing:0.5px;")
         sbl.addWidget(logo)
 
         self._nav = []
@@ -446,8 +446,8 @@ class SettingsWindow(QWidget):
         ctl.setSpacing(0)
 
         self._title = QLabel("\u041e\u0441\u043d\u043e\u0432\u043d\u044b\u0435")
-        self._title.setFont(QFont("Segoe UI", 24, QFont.Weight.Thin))
-        self._title.setStyleSheet(f"color:{T1};border:none;letter-spacing:1px;")
+        self._title.setFont(QFont("Segoe UI", 24, QFont.Weight.Bold))
+        self._title.setStyleSheet(f"color:{T1};border:none;")
         ctl.addWidget(self._title)
 
         self._stack = QStackedWidget()
