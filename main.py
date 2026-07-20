@@ -3,6 +3,7 @@
 Press Right Ctrl to start dictation (hold or toggle mode).
 Release to transcribe and paste text into the active field.
 Press Escape to cancel without inserting.
+Right Alt+P — open settings.
 """
 
 import sys
@@ -48,23 +49,19 @@ class GoodVoiceApp:
         self.stats = Stats().load()
         self.history = History().load()
         self._rec_start = 0.0
+        self._settings_win = None
 
-        # Thread-safe command queue
         self._q = queue.Queue()
-
         self.recorder.on_volume = lambda rms: self._q.put(("rms", rms))
 
     def _cmd(self, *args):
-        """Put a command in the queue (thread-safe)."""
         self._q.put(args)
 
     def _process_queue(self):
-        """Process all queued commands on the main thread."""
         while not self._q.empty():
             try:
                 cmd = self._q.get_nowait()
                 action = cmd[0]
-
                 if action == "rms":
                     self.hud.set_rms(cmd[1])
                 elif action == "state":
@@ -88,26 +85,53 @@ class GoodVoiceApp:
         self.hotkey.on_start = self._on_record_start
         self.hotkey.on_stop = self._on_record_stop
         self.hotkey.on_cancel = self._on_record_cancel
-        self.hotkey.on_settings = lambda: QTimer.singleShot(0, self._open_settings)
+        self.hotkey.on_settings = lambda: self._q.put(("open_settings",))
 
         self.tray.on_show = lambda: self._cmd("show")
         self.tray.on_hide = lambda: self._cmd("hide")
-        self.tray.on_quit = lambda: self._app.quit()
+        self.tray.on_quit = lambda: self._q.put(("quit",))
 
         self.hotkey.start()
         self.tray.start()
         self._running = True
 
-        # Poll queue at 60fps
         self._poll = QTimer()
         self._poll.timeout.connect(self._process_queue)
         self._poll.start(16)
 
+        # Process queue for settings/quit commands
+        self._cmd_timer = QTimer()
+        self._cmd_timer.timeout.connect(self._process_commands)
+        self._cmd_timer.start(16)
+
         print("GoodVoice: готово! Нажмите Right Ctrl для записи.")
+        print("GoodVoice: Right Alt+P — открыть настройки.")
         self._cmd("state", HudState.IDLE)
-        self._process_queue()
 
         sys.exit(self._app.exec())
+
+    def _process_commands(self):
+        while not self._q.empty():
+            try:
+                cmd = self._q.get_nowait()
+                if cmd[0] == "open_settings":
+                    self._open_settings()
+                elif cmd[0] == "quit":
+                    self._quit()
+                else:
+                    # Put non-command items back
+                    self._q.put(cmd)
+                    break
+            except queue.Empty:
+                break
+
+    def _open_settings(self):
+        print("[UI] opening settings...")
+        from settings_window import SettingsWindow
+        self._settings_win = SettingsWindow()
+        self._settings_win.show()
+        self._settings_win.activateWindow()
+        self._settings_win.raise_()
 
     def _on_record_start(self):
         print("[REC] запись...")
@@ -170,15 +194,6 @@ class GoodVoiceApp:
         self._cmd("text", "Отменено")
         time.sleep(0.8)
         self._cmd("state", HudState.HIDDEN)
-
-    def _open_settings(self):
-        print("[UI] opening settings...")
-        from settings_window import SettingsWindow
-        win = SettingsWindow()
-        win.show()
-        win.activateWindow()
-        win.raise_()
-        self._settings_win = win
 
     def _quit(self):
         self._running = False
