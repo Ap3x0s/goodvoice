@@ -417,30 +417,24 @@ class SettingsWindow(QWidget):
             }}
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height:0; }}
             QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{ background:none; }}
-            QPushButton {{
+            QPushButton#btnClose {{
                 background: transparent; color: {T2};
                 border: 1px solid {BDR}; border-radius: 0px;
                 padding: 12px 28px; font-size: 14px; font-weight: 500;
-                min-height: 44px; letter-spacing: 1px;
+                min-height: 40px; letter-spacing: 1px;
             }}
-            QPushButton:hover {{ border-color: rgba(0,102,255,0.3); color: {T1}; }}
-            QPushButton:pressed {{ background: rgba(255,255,255,0.03); }}
-            QPushButton#ok {{
+            QPushButton#btnClose:hover {{ border-color: rgba(0,102,255,0.3); color: {T1}; }}
+            QPushButton#btnClose:pressed {{ background: rgba(255,255,255,0.03); }}
+            QPushButton#btnSave {{
                 background: {AC}; color: #FFFFFF;
                 border: 2px solid {AC}; border-radius: 0px;
                 font-weight: 600; font-size: 14px; letter-spacing: 1px;
                 padding: 12px 32px;
             }}
-            QPushButton#ok:hover {{ background: {AC_H}; border-color: {AC_H}; }}
-            QPushButton#ok:pressed {{ background: {AC_H}; border-color: {AC_H}; }}
+            QPushButton#btnSave:hover {{ background: {AC_H}; border-color: {AC_H}; }}
+            QPushButton#btnSave:pressed {{ background: {AC_H}; border-color: {AC_H}; }}
             QPushButton#danger {{ color:#EF4444; border-color:rgba(239,68,68,0.2); border-radius:0px; }}
             QPushButton#danger:hover {{ background:rgba(239,68,68,0.06); border-color:rgba(239,68,68,0.4); }}
-            QPushButton#titleBtn {{
-                background: transparent; color: {T3};
-                border: none; border-radius: 0px;
-                font-size: 14px; min-height: 32px; min-width: 46px;
-            }}
-            QPushButton#titleBtn:hover {{ background: rgba(255,255,255,0.05); color: {T1}; }}
         """)
 
         root = QVBoxLayout(self)
@@ -473,6 +467,22 @@ class SettingsWindow(QWidget):
             btn.setFixedSize(46, 32)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.clicked.connect(btn_action)
+            # Apply style directly to avoid override
+            btn.setStyleSheet(f"""
+                QPushButton {{
+                    background: transparent;
+                    color: #52525B;
+                    border: none;
+                    border-radius: 0px;
+                    font-size: 14px;
+                    min-height: 32px;
+                    min-width: 46px;
+                }}
+                QPushButton:hover {{
+                    background: rgba(255,255,255,0.05);
+                    color: #FFFFFF;
+                }}
+            """)
             tb_layout.addWidget(btn)
 
         root.addWidget(title_bar)
@@ -554,13 +564,14 @@ class SettingsWindow(QWidget):
         fl.addStretch()
 
         bc = QPushButton("\u0417\u0430\u043a\u0440\u044b\u0442\u044c")
+        bc.setObjectName("btnClose")
         bc.setFixedHeight(40)
         bc.setFixedWidth(120)
         bc.clicked.connect(self.close)
         fl.addWidget(bc)
 
         bs = QPushButton("\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c")
-        bs.setObjectName("ok")
+        bs.setObjectName("btnSave")
         bs.setFixedHeight(40)
         bs.setFixedWidth(140)
         bs.clicked.connect(self._save)
