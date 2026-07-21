@@ -13,3 +13,8 @@ tests/
 .mypy_cache/
 .ruff_cache/
 .pytest_cache/
+settings.json
+stats.json
+history.json
+*.sqlite
+*.db
