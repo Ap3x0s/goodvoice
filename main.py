@@ -163,15 +163,11 @@ class GoodVoiceApp:
         if old.language != new_settings.language:
             print(f"[CFG] speech language changed: {old.language}→{new_settings.language}")
 
-        # UI language change → rebuild settings window with new language
+        # UI language change → refresh settings window in place
         if old.ui_language != new_settings.ui_language:
             print(f"[CFG] UI language changed: {old.ui_language}→{new_settings.ui_language}")
             if self._settings_win:
-                pos = self._settings_win.pos()
-                self._settings_win.close()
-                self._settings_win = SettingsWindow(on_save=self._on_settings_saved)
-                self._settings_win.move(pos)
-                self._settings_win.show()
+                self._settings_win._refresh()
 
         # Hotkey change → restart hotkey manager
         if old.hotkey != new_settings.hotkey or old.trigger_mode != new_settings.trigger_mode:

@@ -511,17 +511,17 @@ class SettingsWindow(QWidget):
         fl = QHBoxLayout()
         fl.setContentsMargins(0, 8, 0, 0)
         fl.addStretch()
-        bc = QPushButton(_t("btn_close", L))
-        bc.setFixedHeight(40); bc.setFixedWidth(120)
-        bc.setStyleSheet(f"QPushButton{{background:transparent;color:{T2};border:1px solid {BDR};border-radius:0px;padding:10px;font-size:14px;font-weight:500;letter-spacing:1px;}} QPushButton:hover{{border-color:rgba(0,102,255,0.3);color:{T1};}}")
-        bc.clicked.connect(self.close)
-        fl.addWidget(bc)
+        self._btn_close = QPushButton(_t("btn_close", L))
+        self._btn_close.setFixedHeight(40); self._btn_close.setFixedWidth(120)
+        self._btn_close.setStyleSheet(f"QPushButton{{background:transparent;color:{T2};border:1px solid {BDR};border-radius:0px;padding:10px;font-size:14px;font-weight:500;letter-spacing:1px;}} QPushButton:hover{{border-color:rgba(0,102,255,0.3);color:{T1};}}")
+        self._btn_close.clicked.connect(self.close)
+        fl.addWidget(self._btn_close)
         fl.addSpacing(12)
-        bs = QPushButton(_t("btn_save", L))
-        bs.setFixedHeight(40); bs.setFixedWidth(140)
-        bs.setStyleSheet(f"QPushButton{{background:{AC};color:#FFFFFF;border:2px solid {AC};border-radius:0px;font-weight:600;font-size:14px;letter-spacing:1px;padding:10px;}} QPushButton:hover{{background:{AC_H};border-color:{AC_H};}}")
-        bs.clicked.connect(self._save)
-        fl.addWidget(bs)
+        self._btn_save = QPushButton(_t("btn_save", L))
+        self._btn_save.setFixedHeight(40); self._btn_save.setFixedWidth(140)
+        self._btn_save.setStyleSheet(f"QPushButton{{background:{AC};color:#FFFFFF;border:2px solid {AC};border-radius:0px;font-weight:600;font-size:14px;letter-spacing:1px;padding:10px;}} QPushButton:hover{{background:{AC_H};border-color:{AC_H};}}")
+        self._btn_save.clicked.connect(self._save)
+        fl.addWidget(self._btn_save)
         ctl.addLayout(fl)
 
         content_row.addWidget(ct, 1)
@@ -544,6 +544,38 @@ class SettingsWindow(QWidget):
         self._title.setText(name)
         self._stack.setCurrentIndex(tmap.get(name, 0))
         for n,b in self._nav: b.setChecked(n==name)
+
+    def _refresh(self):
+        """Rebuild all content with current language."""
+        L = self.settings.ui_language
+        self._lang = L
+        # Update nav labels
+        nav_keys = [("settings","nav_main"),("chart-bar","nav_stat"),("history","nav_hist")]
+        for i, (ic, key) in enumerate(nav_keys):
+            if i < len(self._nav):
+                n, b = self._nav[i]
+                new_text = _t(key, L)
+                b.setText(f"  {new_text}")
+                self._nav[i] = (new_text, b)
+        # Update title
+        cur_name = self._title.text()
+        for key in ["title_main","title_stat","title_hist"]:
+            for lang in ["ru","en"]:
+                if STRINGS[lang].get(key) == cur_name:
+                    self._title.setText(_t(key, L))
+                    break
+        # Rebuild content stack
+        old_idx = self._stack.currentIndex()
+        self._stack.removeWidget(self._stack.widget(0))
+        self._stack.removeWidget(self._stack.widget(0))
+        self._stack.removeWidget(self._stack.widget(0))
+        self._stack.addWidget(self._pg_gen())
+        self._stack.addWidget(self._pg_stat())
+        self._stack.addWidget(self._pg_hist())
+        self._stack.setCurrentIndex(min(old_idx, 2))
+        # Update footer buttons
+        self._btn_close.setText(_t("btn_close", L))
+        self._btn_save.setText(_t("btn_save", L))
 
     def _pg_gen(self):
         L = self._lang
