@@ -148,10 +148,57 @@ class GoodVoiceApp:
     def _open_settings(self):
         print("[UI] opening settings...")
         from settings_window import SettingsWindow
-        self._settings_win = SettingsWindow()
+        self._settings_win = SettingsWindow(on_save=self._on_settings_saved)
         self._settings_win.show()
         self._settings_win.activateWindow()
         self._settings_win.raise_()
+
+    def _on_settings_saved(self, new_settings):
+        """Apply settings changes live without restart."""
+        old = self.settings
+
+        # Hotkey change → restart hotkey manager
+        if old.hotkey != new_settings.hotkey or old.trigger_mode != new_settings.trigger_mode:
+            print(f"[CFG] hotkey changed: {old.hotkey}→{new_settings.hotkey}, mode: {old.trigger_mode}→{new_settings.trigger_mode}")
+            self.hotkey.stop()
+            self.hotkey = HotkeyManager(mode=TriggerMode(new_settings.trigger_mode))
+            self.hotkey.on_start = self._on_record_start
+            self.hotkey.on_stop = self._on_record_stop
+            self.hotkey.on_cancel = self._on_record_cancel
+            self.hotkey.on_settings = lambda: self._q.put(("open_settings",))
+            self.hotkey.start()
+
+        # HUD theme change → recreate HUD
+        if old.hud_theme != new_settings.hud_theme:
+            print(f"[CFG] HUD theme changed: {old.hud_theme}→{new_settings.hud_theme}")
+            self.hud.hide()
+            self.hud = create_hud(new_settings.hud_theme)
+
+        # Model change → reload in background
+        if old.model_size != new_settings.model_size:
+            print(f"[CFG] model changed: {old.model_size}→{new_settings.model_size}, reloading...")
+            self._cmd("state", HudState.THINKING)
+            self._cmd("text", f"Loading {new_settings.model_size}...")
+            threading.Thread(target=self._reload_model, args=(new_settings.model_size,), daemon=True).start()
+
+        # Update live settings reference
+        self.settings = new_settings
+        print(f"[CFG] settings applied: lang={new_settings.language}, punct={new_settings.punctuation}")
+
+    def _reload_model(self, model_size):
+        """Reload whisper model in background thread."""
+        try:
+            from transcriber import Transcriber
+            self.transcriber = Transcriber(model_size=model_size)
+            self.transcriber.load_model()
+            print(f"[CFG] model {model_size} loaded")
+            self._cmd("text", "")
+            self._cmd("state", HudState.IDLE)
+        except Exception as e:
+            print(f"[CFG] model load error: {e}")
+            self._cmd("text", "Error")
+            time.sleep(1.5)
+            self._cmd("state", HudState.HIDDEN)
 
     def _on_record_start(self):
         print("[REC] запись...")

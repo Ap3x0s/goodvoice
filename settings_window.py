@@ -360,10 +360,11 @@ class KPI(QWidget):
 # ── Window ───────────────────────────────────────────────────────
 
 class SettingsWindow(QWidget):
-    def __init__(self):
+    def __init__(self, on_save=None):
         super().__init__()
         self.settings = Settings().load()
         self._lang = self.settings.ui_language
+        self._on_save = on_save
         self.stats = Stats().load()
         self.history = History().load()
         self._build()
@@ -687,8 +688,15 @@ class SettingsWindow(QWidget):
         self.settings.punctuation = self.tog.isChecked()
         self.settings.save()
         self._lang = self.settings.ui_language
-        self.close()
+        if self._on_save:
+            self._on_save(self.settings)
+        # Visual feedback: flash "Saved" on button
+        btn = self.sender()
+        if btn:
+            old = btn.text()
+            btn.setText("✓")
+            QTimer.singleShot(800, lambda: btn.setText(old))
 
 
-def open_settings():
-    w = SettingsWindow(); w.show(); return w
+def open_settings(on_save=None):
+    w = SettingsWindow(on_save=on_save); w.show(); return w
