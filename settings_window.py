@@ -1,4 +1,4 @@
-"""GoodVoice Settings — Minimalism clean UI."""
+"""Ripple Voice Settings — Minimalism clean UI."""
 
 import sys
 import copy
@@ -373,7 +373,7 @@ class SettingsWindow(QWidget):
         self._build()
 
     def _build(self):
-        self.setWindowTitle("GoodVoice")
+        self.setWindowTitle("Ripple Voice")
         self.resize(920, 640)
         self.setMinimumSize(850, 580)
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
@@ -471,7 +471,7 @@ class SettingsWindow(QWidget):
         spacer2.setFixedWidth(3)
         spacer2.setStyleSheet("background:transparent;border:none;")
         lr.addWidget(spacer2)
-        lt = QLabel("GoodVoice")
+        lt = QLabel("Ripple Voice")
         lt.setFont(QFont(FN, 15, QFont.Weight.DemiBold))
         lt.setStyleSheet(f"color:{T1};background:transparent;border:none;")
         lr.addWidget(lt)

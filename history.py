@@ -1,11 +1,11 @@
-"""GoodVoice transcription history."""
+"""Ripple Voice transcription history."""
 
 import json
 import time
 from pathlib import Path
 from dataclasses import dataclass, asdict, field
 
-HISTORY_DIR = Path.home() / "Documents" / "goodvoice"
+HISTORY_DIR = Path.home() / "Documents" / "ripple-voice"
 HISTORY_FILE = HISTORY_DIR / "history.json"
 MAX_ENTRIES = 50
 
