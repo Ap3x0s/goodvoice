@@ -1,10 +1,10 @@
-"""Settings management for GoodVoice."""
+"""Settings management for Ripple Voice."""
 
 import json
 from pathlib import Path
 from dataclasses import dataclass, asdict
 
-SETTINGS_DIR = Path.home() / "Documents" / "goodvoice"
+SETTINGS_DIR = Path.home() / "Documents" / "ripple-voice"
 SETTINGS_FILE = SETTINGS_DIR / "settings.json"
 
 
