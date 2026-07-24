@@ -1,6 +1,7 @@
 """GoodVoice Settings — Minimalism clean UI."""
 
 import sys
+import copy
 from datetime import datetime, timedelta
 from collections import defaultdict
 from pathlib import Path
@@ -723,7 +724,7 @@ class SettingsWindow(QWidget):
         self.settings.save()
         self._lang = self.settings.ui_language
         if self._on_save:
-            self._on_save(self.settings)
+            self._on_save(copy.copy(self.settings))
         # Visual feedback: show check icon briefly
         btn = self.sender()
         if btn:
