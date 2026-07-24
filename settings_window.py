@@ -1,6 +1,7 @@
 """GoodVoice Settings — Minimalism clean UI."""
 
 import sys
+import copy
 from datetime import datetime, timedelta
 from collections import defaultdict
 from pathlib import Path
@@ -31,6 +32,54 @@ T3    = "#999999"
 AC    = "#0066FF"
 AC_H  = "#0052CC"
 FN    = "Segoe UI"
+
+# ── Localization ──────────────────────────────────────────────────
+
+STRINGS = {
+    "ru": {
+        "nav_main": "Основные", "nav_stat": "Статистика", "nav_hist": "История",
+        "title_main": "Основные", "title_stat": "Статистика", "title_hist": "История",
+        "hotkey": "Горячая клавиша", "hotkey_d": "Комбинация для записи голоса",
+        "mode": "Режим записи", "mode_d": "Hold — зажал/отпустил. Toggle — нажал/нажал",
+        "mode_hold": "Зажатие (Hold)", "mode_toggle": "Переключение (Toggle)",
+        "lang": "Язык", "lang_d": "Язык распознавания речи",
+        "theme": "Тема HUD", "theme_d": "Визуальный стиль плавающего окна",
+        "model": "Модель Whisper", "model_d": "Размер модели для распознавания речи (точнее — медленнее)",
+        "ui_lang": "Язык интерфейса", "ui_lang_d": "Русский или Английский язык меню и надписей",
+        "punct": "Пунктуация", "punct_d": "Автоматически расставляет запятые и точки",
+        "btn_close": "Закрыть", "btn_save": "Сохранить",
+        "period": "Период:", "activity": "Активность по дням", "no_data": "Пока нет данных",
+        "sess": "Сессий", "words": "Слов", "chars": "Символов", "wps": "Слов/сессия",
+        "clear_hist": "Очистить историю", "clear_q": "Удалить всю историю?",
+        "lang_ru": "Русский", "lang_en": "English",
+        "wk1": "1 неделя", "wk2": "2 недели", "wk3": "3 недели",
+        "wk4": "4 недели", "wk5": "5 неделя", "wk6": "6 неделя", "wk_all": "За всё время",
+        "words_short": "слов", "days": ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"],
+    },
+    "en": {
+        "nav_main": "General", "nav_stat": "Statistics", "nav_hist": "History",
+        "title_main": "General", "title_stat": "Statistics", "title_hist": "History",
+        "hotkey": "Hotkey", "hotkey_d": "Key combination for voice recording",
+        "mode": "Recording mode", "mode_d": "Hold — press/release. Toggle — press/press",
+        "mode_hold": "Hold", "mode_toggle": "Toggle",
+        "lang": "Language", "lang_d": "Speech recognition language",
+        "theme": "HUD Theme", "theme_d": "Visual style of the floating window",
+        "model": "Whisper Model", "model_d": "Recognition model size (more accurate — slower)",
+        "ui_lang": "Interface Language", "ui_lang_d": "Russian or English for menus and labels",
+        "punct": "Punctuation", "punct_d": "Automatically adds commas and periods",
+        "btn_close": "Close", "btn_save": "Save",
+        "period": "Period:", "activity": "Daily Activity", "no_data": "No data yet",
+        "sess": "Sessions", "words": "Words", "chars": "Characters", "wps": "Words/session",
+        "clear_hist": "Clear History", "clear_q": "Delete all history?",
+        "lang_ru": "Русский", "lang_en": "English",
+        "wk1": "1 week", "wk2": "2 weeks", "wk3": "3 weeks",
+        "wk4": "4 weeks", "wk5": "5 weeks", "wk6": "6 weeks", "wk_all": "All time",
+        "words_short": "words", "days": ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
+    },
+}
+
+def _t(key, lang="ru"):
+    return STRINGS.get(lang, STRINGS["ru"]).get(key, key)
 
 
 # ── Card ─────────────────────────────────────────────────────────
@@ -192,9 +241,10 @@ class Nav(QPushButton):
 # ── Chart ────────────────────────────────────────────────────────
 
 class Chart(QWidget):
-    def __init__(self, data):
+    def __init__(self, data, lang="ru"):
         super().__init__()
         self.data = data
+        self._lang = lang
         self.setMinimumHeight(180)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._h = -1
@@ -207,7 +257,7 @@ class Chart(QWidget):
             self.update()
             if 0 <= i < len(self.data):
                 l, v, d = self.data[i]
-                QToolTip.showText(e.globalPosition().toPoint(), f"{d}: {v} \u0441\u043b\u043e\u0432", self)
+                QToolTip.showText(e.globalPosition().toPoint(), f"{d}: {v} {_t('words_short', self._lang)}", self)
             else: QToolTip.hideText()
 
     def leaveEvent(self, e): self._h = -1; self.update(); QToolTip.hideText()
@@ -260,9 +310,10 @@ class Chart(QWidget):
 # ── History row ──────────────────────────────────────────────────
 
 class Row(QFrame):
-    def __init__(self, entry):
+    def __init__(self, entry, lang="ru"):
         super().__init__()
         self._text = entry["text"]
+        self._lang = lang
         self.setFixedHeight(56)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setStyleSheet(f"QFrame {{ background: {CARD}; border: 1px solid {BDR}; }} QFrame:hover {{ border-color: rgba(0,102,255,0.3); }}")
@@ -282,7 +333,7 @@ class Row(QFrame):
         ml.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         layout.addWidget(ml, 1)
         wc = entry.get("word_count", len(self._text.split()))
-        chip = QLabel(f"{wc} \u0441\u043b\u043e\u0432")
+        chip = QLabel(f"{wc} {_t('words_short', self._lang)}")
         chip.setFont(QFont("Consolas", 10))
         chip.setStyleSheet(f"color:{AC};background:rgba(0,102,255,8);border:1px solid rgba(0,102,255,40);padding:4px 10px;")
         chip.setFixedWidth(76)
@@ -312,9 +363,11 @@ class KPI(QWidget):
 # ── Window ───────────────────────────────────────────────────────
 
 class SettingsWindow(QWidget):
-    def __init__(self):
+    def __init__(self, on_save=None):
         super().__init__()
         self.settings = Settings().load()
+        self._lang = self.settings.ui_language
+        self._on_save = on_save
         self.stats = Stats().load()
         self.history = History().load()
         self._build()
@@ -425,10 +478,12 @@ class SettingsWindow(QWidget):
         lr.addStretch()
         sbl.addLayout(lr)
 
+        L = self._lang
         self._nav = []
-        for ic, nm in [("settings","\u041e\u0441\u043d\u043e\u0432\u043d\u044b\u0435"),("chart-bar","\u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430"),("history","\u0418\u0441\u0442\u043e\u0440\u0438\u044f")]:
+        for ic, key in [("settings","nav_main"),("chart-bar","nav_stat"),("history","nav_hist")]:
+            nm = _t(key, L)
             b = Nav(ic, nm)
-            b.clicked.connect(lambda checked, n=nm: self._goto(n))
+            b.clicked.connect(lambda checked, btn=b: self._goto(btn.text().strip()))
             sbl.addWidget(b); self._nav.append((nm, b))
         sbl.addStretch()
         content_row.addWidget(sb)
@@ -438,7 +493,7 @@ class SettingsWindow(QWidget):
         ctl = QVBoxLayout(ct)
         ctl.setContentsMargins(32, 24, 32, 16); ctl.setSpacing(0)
 
-        self._title = QLabel("\u041e\u0441\u043d\u043e\u0432\u043d\u044b\u0435")
+        self._title = QLabel(_t("title_main", L))
         self._title.setFont(QFont(FN, 24, QFont.Weight.Bold))
         self._title.setStyleSheet(f"color:{T1};border:none;")
         ctl.addWidget(self._title)
@@ -455,25 +510,26 @@ class SettingsWindow(QWidget):
         ctl.addWidget(line)
 
         # Footer
+        L = self._lang
         fl = QHBoxLayout()
         fl.setContentsMargins(0, 8, 0, 0)
         fl.addStretch()
-        bc = QPushButton("\u0417\u0430\u043a\u0440\u044b\u0442\u044c")
-        bc.setFixedHeight(40); bc.setFixedWidth(120)
-        bc.setStyleSheet(f"QPushButton{{background:transparent;color:{T2};border:1px solid {BDR};border-radius:0px;padding:10px;font-size:14px;font-weight:500;letter-spacing:1px;}} QPushButton:hover{{border-color:rgba(0,102,255,0.3);color:{T1};}}")
-        bc.clicked.connect(self.close)
-        fl.addWidget(bc)
+        self._btn_close = QPushButton(_t("btn_close", L))
+        self._btn_close.setFixedHeight(40); self._btn_close.setFixedWidth(120)
+        self._btn_close.setStyleSheet(f"QPushButton{{background:transparent;color:{T2};border:1px solid {BDR};border-radius:0px;padding:10px;font-size:14px;font-weight:500;letter-spacing:1px;}} QPushButton:hover{{border-color:rgba(0,102,255,0.3);color:{T1};}}")
+        self._btn_close.clicked.connect(self.close)
+        fl.addWidget(self._btn_close)
         fl.addSpacing(12)
-        bs = QPushButton("\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c")
-        bs.setFixedHeight(40); bs.setFixedWidth(140)
-        bs.setStyleSheet(f"QPushButton{{background:{AC};color:#FFFFFF;border:2px solid {AC};border-radius:0px;font-weight:600;font-size:14px;letter-spacing:1px;padding:10px;}} QPushButton:hover{{background:{AC_H};border-color:{AC_H};}}")
-        bs.clicked.connect(self._save)
-        fl.addWidget(bs)
+        self._btn_save = QPushButton(_t("btn_save", L))
+        self._btn_save.setFixedHeight(40); self._btn_save.setFixedWidth(140)
+        self._btn_save.setStyleSheet(f"QPushButton{{background:{AC};color:#FFFFFF;border:2px solid {AC};border-radius:0px;font-weight:600;font-size:14px;letter-spacing:1px;padding:10px;}} QPushButton:hover{{background:{AC_H};border-color:{AC_H};}}")
+        self._btn_save.clicked.connect(self._save)
+        fl.addWidget(self._btn_save)
         ctl.addLayout(fl)
 
         content_row.addWidget(ct, 1)
         root.addLayout(content_row, 1)
-        self._goto("\u041e\u0441\u043d\u043e\u0432\u043d\u044b\u0435")
+        self._goto(_t("title_main", self._lang))
 
     def _toggle_max(self):
         if self.isMaximized():
@@ -486,23 +542,63 @@ class SettingsWindow(QWidget):
                 self._tb_max_btn.setIcon(self._tb_icons["restore"])
 
     def _goto(self, name):
+        L = self._lang
+        tmap = {_t("title_main",L):0, _t("title_stat",L):1, _t("title_hist",L):2}
         self._title.setText(name)
-        self._stack.setCurrentIndex({"\u041e\u0441\u043d\u043e\u0432\u043d\u044b\u0435":0,"\u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430":1,"\u0418\u0441\u0442\u043e\u0440\u0438\u044f":2}[name])
+        self._stack.setCurrentIndex(tmap.get(name, 0))
         for n,b in self._nav: b.setChecked(n==name)
 
+    def _refresh(self):
+        """Rebuild all content with current language."""
+        L = self.settings.ui_language
+        self._lang = L
+        # Update nav labels
+        nav_keys = [("settings","nav_main"),("chart-bar","nav_stat"),("history","nav_hist")]
+        for i, (ic, key) in enumerate(nav_keys):
+            if i < len(self._nav):
+                n, b = self._nav[i]
+                new_text = _t(key, L)
+                b.setText(f"  {new_text}")
+                self._nav[i] = (new_text, b)
+        # Update title
+        cur_name = self._title.text()
+        for key in ["title_main","title_stat","title_hist"]:
+            for lang in ["ru","en"]:
+                if STRINGS[lang].get(key) == cur_name:
+                    self._title.setText(_t(key, L))
+                    break
+        # Rebuild content stack
+        old_idx = self._stack.currentIndex()
+        self._stack.removeWidget(self._stack.widget(0))
+        self._stack.removeWidget(self._stack.widget(0))
+        self._stack.removeWidget(self._stack.widget(0))
+        self._stack.addWidget(self._pg_gen())
+        self._stack.addWidget(self._pg_stat())
+        self._stack.addWidget(self._pg_hist())
+        self._stack.setCurrentIndex(min(old_idx, 2))
+        # Update footer buttons
+        self._btn_close.setText(_t("btn_close", L))
+        self._btn_save.setText(_t("btn_save", L))
+
     def _pg_gen(self):
+        L = self._lang
         sa = QScrollArea(); sa.setWidgetResizable(True)
         sa.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         c = QWidget(); lay = QVBoxLayout(c)
         lay.setContentsMargins(0,0,8,0); lay.setSpacing(8)
         lm = {"auto":"Auto","ru":"Russian","en":"English","de":"German","fr":"French","es":"Spanish"}
         mm = {"tiny":"tiny","base":"base","small":"small","medium":"medium","large-v2":"large-v2","large-v3":"large-v3","turbo":"turbo"}
+        hk = "Right Alt" if self.settings.hotkey=="alt_r" else ("Right Ctrl" if self.settings.hotkey=="ctrl_r" else "Left Ctrl")
+        mh = _t("mode_hold", L); mt = _t("mode_toggle", L)
+        cur_m = mh if self.settings.trigger_mode=="hold" else mt
+        cur_ui = _t("lang_ru", L) if self.settings.ui_language=="ru" else _t("lang_en", L)
         defs = [
-            ("\u0413\u043e\u0440\u044f\u0447\u0430\u044f \u043a\u043b\u0430\u0432\u0438\u0448\u0430","\u041a\u043e\u043c\u0431\u0438\u043d\u0430\u0446\u0438\u044f \u0434\u043b\u044f \u0437\u0430\u043f\u0438\u0441\u0438 \u0433\u043e\u043b\u043e\u0441\u0430",["Right Alt","Right Ctrl","Left Ctrl"],"Right Alt" if self.settings.hotkey=="alt_r" else ("Right Ctrl" if self.settings.hotkey=="ctrl_r" else "Left Ctrl")),
-            ("\u0420\u0435\u0436\u0438\u043c \u0437\u0430\u043f\u0438\u0441\u0438","Hold \u2014 \u0437\u0430\u0436\u0430\u043b/\u043e\u0442\u043f\u0443\u0441\u0442\u0438\u043b. Toggle \u2014 \u043d\u0430\u0436\u0430\u043b/\u043d\u0430\u0436\u0430\u043b",["\u0417\u0430\u0436\u0430\u0442\u0438\u0435 (Hold)","\u041f\u0435\u0440\u0435\u043a\u043b\u044e\u0447\u0435\u043d\u0438\u0435 (Toggle)"],"\u0417\u0430\u0436\u0430\u0442\u0438\u0435 (Hold)" if self.settings.trigger_mode=="hold" else "\u041f\u0435\u0440\u0435\u043a\u043b\u044e\u0447\u0435\u043d\u0438\u0435 (Toggle)"),
-            ("\u042f\u0437\u044b\u043a","\u042f\u0437\u044b\u043a \u0440\u0430\u0441\u043f\u043e\u0437\u043d\u0430\u0432\u0430\u043d\u0438\u044f \u0440\u0435\u0447\u0438",["Auto","Russian","English","German","French","Spanish"],lm.get(self.settings.language,"Auto")),
-            ("\u0422\u0435\u043c\u0430 HUD","\u0412\u0438\u0437\u0443\u0430\u043b\u044c\u043d\u044b\u0439 \u0441\u0442\u0438\u043b\u044c \u043f\u043b\u0430\u0432\u0430\u044e\u0449\u0435\u0433\u043e \u043e\u043a\u043d\u0430",["hybrid_v2","google","google_v2","hybrid","vercel"],self.settings.hud_theme),
-            ("\u041c\u043e\u0434\u0435\u043b\u044c Whisper","\u0420\u0430\u0437\u043c\u0435\u0440 \u043c\u043e\u0434\u0435\u043b\u0438 \u0434\u043b\u044f \u0440\u0430\u0441\u043f\u043e\u0437\u043d\u0430\u0432\u0430\u043d\u0438\u044f \u0440\u0435\u0447\u0438 (\u0442\u043e\u0447\u043d\u0435\u0435 \u2014 \u043c\u0435\u0434\u043b\u0435\u0435)",["tiny","base","small","medium","large-v2","large-v3","turbo"],mm.get(self.settings.model_size,"medium")),
+            (_t("hotkey",L), _t("hotkey_d",L), ["Right Alt","Right Ctrl","Left Ctrl"], hk),
+            (_t("mode",L), _t("mode_d",L), [mh, mt], cur_m),
+            (_t("lang",L), _t("lang_d",L), ["Auto","Russian","English","German","French","Spanish"], lm.get(self.settings.language,"Auto")),
+            (_t("ui_lang",L), _t("ui_lang_d",L), [_t("lang_ru",L), _t("lang_en",L)], cur_ui),
+            (_t("theme",L), _t("theme_d",L), ["hybrid_v2","google","google_v2","hybrid","vercel"], self.settings.hud_theme),
+            (_t("model",L), _t("model_d",L), ["tiny","base","small","medium","large-v2","large-v3","turbo"], mm.get(self.settings.model_size,"medium")),
         ]
         self._c = []
         for title,desc,items,cur in defs:
@@ -520,9 +616,9 @@ class SettingsWindow(QWidget):
         f = Card(); fl = QHBoxLayout(f)
         fl.setContentsMargins(20,0,20,0); fl.setSpacing(16)
         col = QVBoxLayout(); col.setSpacing(2); col.setAlignment(Qt.AlignmentFlag.AlignVCenter)
-        t = QLabel("\u041f\u0443\u043d\u043a\u0442\u0443\u0430\u0446\u0438\u044f"); t.setFont(QFont(FN,14,QFont.Weight.Normal))
+        t = QLabel(_t("punct",L)); t.setFont(QFont(FN,14,QFont.Weight.Normal))
         t.setStyleSheet(f"color:{T1};background:transparent;border:none;"); col.addWidget(t)
-        d = QLabel("\u0410\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0438 \u0440\u0430\u0441\u0441\u0442\u0430\u0432\u043b\u044f\u0435\u0442 \u0437\u0430\u043f\u044f\u0442\u044b\u0435 \u0438 \u0442\u043e\u0447\u043a\u0438"); d.setFont(QFont(FN,12))
+        d = QLabel(_t("punct_d",L)); d.setFont(QFont(FN,12))
         d.setStyleSheet(f"color:{T3};background:transparent;border:none;"); col.addWidget(d)
         fl.addLayout(col, 1)
         self.tog = Switch(self.settings.punctuation); fl.addWidget(self.tog)
@@ -530,37 +626,42 @@ class SettingsWindow(QWidget):
         lay.addStretch(); sa.setWidget(c); return sa
 
     def _pg_stat(self):
+        L = self._lang
         sa = QScrollArea(); sa.setWidgetResizable(True)
         sa.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         c = QWidget(); lay = QVBoxLayout(c)
         lay.setContentsMargins(0,0,8,0); lay.setSpacing(12)
         st = self.stats
         fr = QHBoxLayout()
-        fl = QLabel("\u041f\u0435\u0440\u0438\u043e\u0434:")
+        fl = QLabel(_t("period",L))
         fl.setFont(QFont("Consolas",11)); fl.setStyleSheet(f"color:{T3};background:transparent;border:none;letter-spacing:1px;")
         fr.addWidget(fl); fr.addStretch()
-        self._filter = combo(["1 \u043d\u0435\u0434\u0435\u043b\u044f","2 \u043d\u0435\u0434\u0435\u043b\u0438","3 \u043d\u0435\u0434\u0435\u043b\u0438","4 \u043d\u0435\u0434\u0435\u043b\u0438","5 \u043d\u0435\u0434\u0435\u043b\u044c","6 \u043d\u0435\u0434\u0435\u043b\u044c","\u0417\u0430 \u0432\u0441\u0451 \u0432\u0440\u0435\u043c\u044f"],"1 \u043d\u0435\u0434\u0435\u043b\u044f")
+        wk = [_t("wk1",L),_t("wk2",L),_t("wk3",L),_t("wk4",L),_t("wk5",L),_t("wk6",L),_t("wk_all",L)]
+        self._filter = combo(wk, wk[0])
         self._filter.setFixedWidth(160); self._filter.currentIndexChanged.connect(self._update_stat)
         fr.addWidget(self._filter); lay.addLayout(fr)
         self._kpi_row = QHBoxLayout(); self._kpi_row.setSpacing(12); lay.addLayout(self._kpi_row)
         if st.sessions:
             f = Card(); f.setMinimumHeight(240)
             fl = QVBoxLayout(f); fl.setContentsMargins(20,16,20,12); fl.setSpacing(4)
-            t = QLabel("\u0410\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c \u043f\u043e \u0434\u043d\u044f\u043c")
+            t = QLabel(_t("activity",L))
             t.setFont(QFont("Consolas",11)); t.setStyleSheet(f"color:{T3};background:transparent;border:none;letter-spacing:1px;")
             fl.addWidget(t)
-            self._chart = Chart([]); self._chart.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            self._chart = Chart([], L); self._chart.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
             fl.addWidget(self._chart, 1); lay.addWidget(f, 1)
         else:
-            lbl = QLabel("\u041f\u043e\u043a\u0430 \u043d\u0435\u0442 \u0434\u0430\u043d\u043d\u044b\u0445")
+            lbl = QLabel(_t("no_data",L))
             lbl.setFont(QFont(FN,13)); lbl.setStyleSheet(f"color:{T3};padding:40px;border:none;")
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter); lay.addWidget(lbl)
         lay.addStretch(); sa.setWidget(c)
         self._update_stat(); return sa
 
     def _update_stat(self):
-        ft = self._filter.currentText() if hasattr(self,'_filter') else "1 \u043d\u0435\u0434\u0435\u043b\u044f"
-        dm = {"\u0417\u0430 \u0432\u0441\u0451 \u0432\u0440\u0435\u043c\u044f":0,"1 \u043d\u0435\u0434\u0435\u043b\u044f":7,"2 \u043d\u0435\u0434\u0435\u043b\u0438":14,"3 \u043d\u0435\u0434\u0435\u043b\u0438":21,"4 \u043d\u0435\u0434\u0435\u043b\u0438":28,"5 \u043d\u0435\u0434\u0435\u043b\u044c":35,"6 \u043d\u0435\u0434\u0435\u043b\u044c":42}
+        L = self._lang
+        ft = self._filter.currentText() if hasattr(self,'_filter') else _t("wk1",L)
+        wk_keys = [_t("wk1",L),_t("wk2",L),_t("wk3",L),_t("wk4",L),_t("wk5",L),_t("wk6",L),_t("wk_all",L)]
+        wk_days = [7,14,21,28,35,42,0]
+        dm = dict(zip(wk_keys, wk_days))
         days = dm.get(ft,0); st = self.stats
         filtered = st.sessions if days==0 else [s for s in st.sessions if datetime.fromtimestamp(s["timestamp"])>=datetime.now()-timedelta(days=days)]
         ts = len(filtered); tw = sum(s.get("word_count",0) for s in filtered)
@@ -568,32 +669,34 @@ class SettingsWindow(QWidget):
         while self._kpi_row.count():
             it = self._kpi_row.takeAt(0)
             if it.widget(): it.widget().deleteLater()
-        for v,l in [(str(ts),"\u0421\u0435\u0441\u0441\u0438\u0439"),(f"{tw:,}","\u0421\u043b\u043e\u0432"),(f"{tc:,}","\u0421\u0438\u043c\u0432\u043e\u043b\u043e\u0432"),(f"{aw:.0f}","\u0421\u043b\u043e\u0432/\u0441\u0435\u0441\u0441\u0438\u044f")]:
+        for v,l in [(str(ts),_t("sess",L)),(f"{tw:,}",_t("words",L)),(f"{tc:,}",_t("chars",L)),(f"{aw:.0f}",_t("wps",L))]:
             self._kpi_row.addWidget(KPI(v,l))
         if hasattr(self,'_chart') and self._chart:
             daily = defaultdict(int)
             for s in filtered: daily[datetime.fromtimestamp(s["timestamp"]).strftime("%d.%m")] += s.get("word_count",0)
+            days_names = _t("days",L)
             if days==0:
                 chart_data = [(k,daily[k],k) for k in sorted(daily.keys())]
             else:
                 today = datetime.now()
-                chart_data = [(["\u041f\u043d","\u0412\u0442","\u0421\u0440","\u0427\u0442","\u041f\u0442","\u0421\u0431","\u0412\u0441"][(today-timedelta(days=i)).weekday()],daily.get((today-timedelta(days=i)).strftime("%d.%m"),0),(today-timedelta(days=i)).strftime("%d %B")) for i in range(days-1,-1,-1)]
+                chart_data = [(days_names[(today-timedelta(days=i)).weekday()],daily.get((today-timedelta(days=i)).strftime("%d.%m"),0),(today-timedelta(days=i)).strftime("%d %B")) for i in range(days-1,-1,-1)]
             self._chart.data = chart_data; self._chart.update()
 
     def _pg_hist(self):
+        L = self._lang
         sa = QScrollArea(); sa.setWidgetResizable(True)
         sa.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         c = QWidget(); lay = QVBoxLayout(c)
         lay.setContentsMargins(0,0,8,0); lay.setSpacing(8)
         entries = self.history.get_recent(30)
         if not entries:
-            lbl = QLabel("\u0418\u0441\u0442\u043e\u0440\u0438\u044f \u043f\u0443\u0441\u0442\u0430")
+            lbl = QLabel(_t("no_data",L))
             lbl.setFont(QFont(FN,13)); lbl.setStyleSheet(f"color:{T3};padding:40px;border:none;")
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter); lay.addWidget(lbl)
         else:
-            for e in entries: lay.addWidget(Row(e))
+            for e in entries: lay.addWidget(Row(e, L))
             lay.addSpacing(8)
-            btn = QPushButton("\u041e\u0447\u0438\u0441\u0442\u0438\u0442\u044c \u0438\u0441\u0442\u043e\u0440\u0438\u044e")
+            btn = QPushButton(_t("clear_hist",L))
             btn.setObjectName("danger"); btn.clicked.connect(self._clr)
             btn.setFixedHeight(40)
             btn.setStyleSheet(f"QPushButton{{background:transparent;color:#DC2626;border:1px solid rgba(220,38,38,0.3);border-radius:0px;padding:10px;font-size:13px;font-family:{FN};letter-spacing:0.5px;}} QPushButton:hover{{background:rgba(220,38,38,0.08);border-color:rgba(220,38,38,0.5);}}")
@@ -601,7 +704,8 @@ class SettingsWindow(QWidget):
         lay.addStretch(); sa.setWidget(c); return sa
 
     def _clr(self):
-        if QMessageBox.question(self,"\u041e\u0447\u0438\u0441\u0442\u043a\u0430","\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u0432\u0441\u044e \u0438\u0441\u0442\u043e\u0440\u0438\u044e?",QMessageBox.StandardButton.Yes|QMessageBox.StandardButton.No)==QMessageBox.StandardButton.Yes:
+        L = self._lang
+        if QMessageBox.question(self, _t("clear_hist",L), _t("clear_q",L), QMessageBox.StandardButton.Yes|QMessageBox.StandardButton.No)==QMessageBox.StandardButton.Yes:
             self.history.clear()
             self._stack.removeWidget(self._stack.widget(2))
             self._stack.insertWidget(2,self._pg_hist())
@@ -613,11 +717,33 @@ class SettingsWindow(QWidget):
         self.settings.hotkey = hm.get(self._c[0].currentText(),"alt_r")
         self.settings.trigger_mode = "hold" if self._c[1].currentIndex()==0 else "toggle"
         self.settings.language = lm.get(self._c[2].currentText(),"auto")
-        self.settings.hud_theme = self._c[3].currentText()
-        self.settings.model_size = self._c[4].currentText()
+        self.settings.ui_language = "ru" if self._c[3].currentIndex()==0 else "en"
+        self.settings.hud_theme = self._c[4].currentText()
+        self.settings.model_size = self._c[5].currentText()
         self.settings.punctuation = self.tog.isChecked()
-        self.settings.save(); self.close()
+        self.settings.save()
+        self._lang = self.settings.ui_language
+        if self._on_save:
+            self._on_save(copy.copy(self.settings))
+        # Visual feedback: show check icon briefly
+        btn = self.sender()
+        if btn:
+            old_icon = btn.icon()
+            check_path = Path(__file__).parent / "assets" / "icons" / "check.svg"
+            if check_path.exists():
+                px = QPixmap(str(check_path))
+                tinted = QPixmap(px.size())
+                tinted.fill(QColor(0, 0, 0, 0))
+                painter = QPainter(tinted)
+                painter.drawPixmap(0, 0, px)
+                painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                painter.fillRect(tinted.rect(), QColor("#FFFFFF"))
+                painter.end()
+                btn.setIcon(QIcon(tinted))
+                btn.setIconSize(QSize(18, 18))
+            btn.setText("")
+            QTimer.singleShot(800, lambda: (btn.setIcon(old_icon), btn.setIconSize(QSize(0,0)), btn.setText(_t("btn_save", self._lang))))
 
 
-def open_settings():
-    w = SettingsWindow(); w.show(); return w
+def open_settings(on_save=None):
+    w = SettingsWindow(on_save=on_save); w.show(); return w
