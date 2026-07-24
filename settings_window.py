@@ -702,7 +702,7 @@ class SettingsWindow(QWidget):
                 painter = QPainter(tinted)
                 painter.drawPixmap(0, 0, px)
                 painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                painter.fillRect(tinted.rect(), QColor("#22C55E"))
+                painter.fillRect(tinted.rect(), QColor("#FFFFFF"))
                 painter.end()
                 btn.setIcon(QIcon(tinted))
                 btn.setIconSize(QSize(18, 18))
