@@ -480,7 +480,7 @@ class SettingsWindow(QWidget):
         for ic, key in [("settings","nav_main"),("chart-bar","nav_stat"),("history","nav_hist")]:
             nm = _t(key, L)
             b = Nav(ic, nm)
-            b.clicked.connect(lambda checked, n=nm: self._goto(n))
+            b.clicked.connect(lambda checked, btn=b: self._goto(btn.text().strip()))
             sbl.addWidget(b); self._nav.append((nm, b))
         sbl.addStretch()
         content_row.addWidget(sb)
