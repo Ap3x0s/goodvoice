@@ -159,14 +159,19 @@ class GoodVoiceApp:
         old = self.settings
         print(f"[CFG] comparing: model={old.model_size}→{new_settings.model_size}, lang={old.language}→{new_settings.language}")
 
-        # Language change → update HUD immediately + show indicator
+        # Speech language change → update HUD language label for next recording
         if old.language != new_settings.language:
-            print(f"[CFG] language changed: {old.language}→{new_settings.language}")
-            lang = new_settings.language.upper() if new_settings.language != "auto" else "AUTO"
-            self._cmd("lang", lang)
-            self._cmd("text", f"Language: {lang}")
-            self._cmd("show")
-            QTimer.singleShot(1500, lambda: self._cmd("text", ""))
+            print(f"[CFG] speech language changed: {old.language}→{new_settings.language}")
+
+        # UI language change → rebuild settings window with new language
+        if old.ui_language != new_settings.ui_language:
+            print(f"[CFG] UI language changed: {old.ui_language}→{new_settings.ui_language}")
+            if self._settings_win:
+                pos = self._settings_win.pos()
+                self._settings_win.close()
+                self._settings_win = SettingsWindow(on_save=self._on_settings_saved)
+                self._settings_win.move(pos)
+                self._settings_win.show()
 
         # Hotkey change → restart hotkey manager
         if old.hotkey != new_settings.hotkey or old.trigger_mode != new_settings.trigger_mode:
