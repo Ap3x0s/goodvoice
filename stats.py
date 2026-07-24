@@ -1,11 +1,11 @@
-"""GoodVoice statistics tracker."""
+"""Ripple Voice statistics tracker."""
 
 import json
 import time
 from pathlib import Path
 from dataclasses import dataclass, asdict, field
 
-STATS_DIR = Path.home() / "Documents" / "goodvoice"
+STATS_DIR = Path.home() / "Documents" / "ripple-voice"
 STATS_FILE = STATS_DIR / "stats.json"
 
 

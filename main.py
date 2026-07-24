@@ -1,4 +1,4 @@
-"""GoodVoice — Windows voice dictation tool.
+"""Ripple Voice — Windows voice dictation tool.
 
 Press Right Ctrl to start dictation (hold or toggle mode).
 Release to transcribe and paste text into the active field.
@@ -30,7 +30,7 @@ ASSETS_DIR = Path(__file__).parent / "assets"
 MIC_ICON = ASSETS_DIR / "mic.png"
 
 
-class GoodVoiceApp:
+class RippleVoiceApp:
     def __init__(self):
         self._app = QApplication.instance() or QApplication(sys.argv)
         # Set app icon for taskbar and window
@@ -87,9 +87,9 @@ class GoodVoiceApp:
                 break
 
     def start(self):
-        print("GoodVoice: загрузка модели...")
+        print("Ripple Voice: загрузка модели...")
         self.transcriber.load_model()
-        print("GoodVoice: модель загружена.")
+        print("Ripple Voice: модель загружена.")
 
         self.hotkey.on_start = self._on_record_start
         self.hotkey.on_stop = self._on_record_stop
@@ -113,8 +113,8 @@ class GoodVoiceApp:
         self._cmd_timer.timeout.connect(self._process_commands)
         self._cmd_timer.start(16)
 
-        print("GoodVoice: готово! Нажмите Right Ctrl для записи.")
-        print("GoodVoice: Right Alt+P — открыть настройки.")
+        print("Ripple Voice: готово! Нажмите Right Ctrl для записи.")
+        print("Ripple Voice: Right Alt+P — открыть настройки.")
         self._cmd("state", HudState.IDLE)
 
         sys.exit(self._app.exec())
@@ -297,7 +297,7 @@ class GoodVoiceApp:
 
 
 def main():
-    app = GoodVoiceApp()
+    app = RippleVoiceApp()
     app.start()
 
 

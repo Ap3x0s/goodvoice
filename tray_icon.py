@@ -22,7 +22,7 @@ class TrayIcon:
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Выход", self._on_quit_click),
         )
-        self._icon = pystray.Icon("GoodVoice", image, "GoodVoice", menu)
+        self._icon = pystray.Icon("Ripple Voice", image, "Ripple Voice", menu)
         self._thread = threading.Thread(target=self._icon.run, daemon=True)
         self._thread.start()
 
