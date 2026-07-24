@@ -516,6 +516,19 @@ class SettingsWindow(QWidget):
             fl.addLayout(col, 1)
             cb = combo(items, cur); fl.addWidget(cb)
             self._c.append(cb); lay.addWidget(f)
+        # UI Language
+        f = Card(); fl = QHBoxLayout(f)
+        fl.setContentsMargins(20,0,20,0); fl.setSpacing(16)
+        col = QVBoxLayout(); col.setSpacing(2); col.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+        t = QLabel("\u042f\u0437\u044b\u043a \u0438\u043d\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0430"); t.setFont(QFont(FN,14,QFont.Weight.Normal))
+        t.setStyleSheet(f"color:{T1};background:transparent;border:none;"); col.addWidget(t)
+        d = QLabel("\u0420\u0443\u0441\u0441\u043a\u0438\u0439 \u0438\u043b\u0438 \u0410\u043d\u0433\u043b\u0438\u0439\u0441\u043a\u0438\u0439 \u044f\u0437\u044b\u043a \u043c\u0435\u043d\u044e \u0438 \u043d\u0430\u0434\u043f\u0438\u0441\u0435\u0439"); d.setFont(QFont(FN,12))
+        d.setStyleSheet(f"color:{T3};background:transparent;border:none;"); col.addWidget(d)
+        fl.addLayout(col, 1)
+        self._ui_lang = combo(["\u0420\u0443\u0441\u0441\u043a\u0438\u0439","English"],"\u0420\u0443\u0441\u0441\u043a\u0438\u0439" if self.settings.ui_language=="ru" else "English")
+        self._ui_lang.setFixedWidth(180)
+        fl.addWidget(self._ui_lang)
+        lay.addWidget(f)
         # Punctuation
         f = Card(); fl = QHBoxLayout(f)
         fl.setContentsMargins(20,0,20,0); fl.setSpacing(16)
@@ -615,6 +628,7 @@ class SettingsWindow(QWidget):
         self.settings.language = lm.get(self._c[2].currentText(),"auto")
         self.settings.hud_theme = self._c[3].currentText()
         self.settings.model_size = self._c[4].currentText()
+        self.settings.ui_language = "ru" if self._ui_lang.currentIndex()==0 else "en"
         self.settings.punctuation = self.tog.isChecked()
         self.settings.save(); self.close()
 
