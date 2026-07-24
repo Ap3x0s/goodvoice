@@ -560,6 +560,7 @@ class SettingsWindow(QWidget):
             (_t("hotkey",L), _t("hotkey_d",L), ["Right Alt","Right Ctrl","Left Ctrl"], hk),
             (_t("mode",L), _t("mode_d",L), [mh, mt], cur_m),
             (_t("lang",L), _t("lang_d",L), ["Auto","Russian","English","German","French","Spanish"], lm.get(self.settings.language,"Auto")),
+            (_t("ui_lang",L), _t("ui_lang_d",L), [_t("lang_ru",L), _t("lang_en",L)], cur_ui),
             (_t("theme",L), _t("theme_d",L), ["hybrid_v2","google","google_v2","hybrid","vercel"], self.settings.hud_theme),
             (_t("model",L), _t("model_d",L), ["tiny","base","small","medium","large-v2","large-v3","turbo"], mm.get(self.settings.model_size,"medium")),
         ]
@@ -575,19 +576,6 @@ class SettingsWindow(QWidget):
             fl.addLayout(col, 1)
             cb = combo(items, cur); fl.addWidget(cb)
             self._c.append(cb); lay.addWidget(f)
-        # UI Language
-        f = Card(); fl = QHBoxLayout(f)
-        fl.setContentsMargins(20,0,20,0); fl.setSpacing(16)
-        col = QVBoxLayout(); col.setSpacing(2); col.setAlignment(Qt.AlignmentFlag.AlignVCenter)
-        t = QLabel(_t("ui_lang",L)); t.setFont(QFont(FN,14,QFont.Weight.Normal))
-        t.setStyleSheet(f"color:{T1};background:transparent;border:none;"); col.addWidget(t)
-        d = QLabel(_t("ui_lang_d",L)); d.setFont(QFont(FN,12))
-        d.setStyleSheet(f"color:{T3};background:transparent;border:none;"); col.addWidget(d)
-        fl.addLayout(col, 1)
-        self._ui_lang = combo([_t("lang_ru",L), _t("lang_en",L)], cur_ui)
-        self._ui_lang.setFixedWidth(180)
-        fl.addWidget(self._ui_lang)
-        lay.addWidget(f)
         # Punctuation
         f = Card(); fl = QHBoxLayout(f)
         fl.setContentsMargins(20,0,20,0); fl.setSpacing(16)
@@ -693,9 +681,9 @@ class SettingsWindow(QWidget):
         self.settings.hotkey = hm.get(self._c[0].currentText(),"alt_r")
         self.settings.trigger_mode = "hold" if self._c[1].currentIndex()==0 else "toggle"
         self.settings.language = lm.get(self._c[2].currentText(),"auto")
-        self.settings.hud_theme = self._c[3].currentText()
-        self.settings.model_size = self._c[4].currentText()
-        self.settings.ui_language = "ru" if self._ui_lang.currentIndex()==0 else "en"
+        self.settings.ui_language = "ru" if self._c[3].currentIndex()==0 else "en"
+        self.settings.hud_theme = self._c[4].currentText()
+        self.settings.model_size = self._c[5].currentText()
         self.settings.punctuation = self.tog.isChecked()
         self.settings.save()
         self._lang = self.settings.ui_language
