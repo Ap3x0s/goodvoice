@@ -157,21 +157,28 @@ class GoodVoiceApp:
     def _on_settings_saved(self, new_settings):
         """Apply settings changes live without restart."""
         old = self.settings
-        print(f"[CFG] comparing: model={old.model_size}→{new_settings.model_size}, lang={old.language}→{new_settings.language}")
+        # Save old values BEFORE updating reference (objects may share)
+        old_ui = old.ui_language
+        old_model = old.model_size
+        old_lang = old.language
+        old_hotkey = old.hotkey
+        old_mode = old.trigger_mode
+        old_theme = old.hud_theme
+        print(f"[CFG] comparing: model={old_model}→{new_settings.model_size}, lang={old_lang}→{new_settings.language}, ui={old_ui}→{new_settings.ui_language}")
 
-        # Speech language change → update HUD language label for next recording
-        if old.language != new_settings.language:
-            print(f"[CFG] speech language changed: {old.language}→{new_settings.language}")
+        # Speech language change
+        if old_lang != new_settings.language:
+            print(f"[CFG] speech language changed: {old_lang}→{new_settings.language}")
 
         # UI language change → refresh settings window in place
-        if old.ui_language != new_settings.ui_language:
-            print(f"[CFG] UI language changed: {old.ui_language}→{new_settings.ui_language}")
+        if old_ui != new_settings.ui_language:
+            print(f"[CFG] UI language changed: {old_ui}→{new_settings.ui_language}")
             if self._settings_win:
                 self._settings_win._refresh()
 
         # Hotkey change → restart hotkey manager
-        if old.hotkey != new_settings.hotkey or old.trigger_mode != new_settings.trigger_mode:
-            print(f"[CFG] hotkey changed: {old.hotkey}→{new_settings.hotkey}, mode: {old.trigger_mode}→{new_settings.trigger_mode}")
+        if old_hotkey != new_settings.hotkey or old_mode != new_settings.trigger_mode:
+            print(f"[CFG] hotkey changed: {old_hotkey}→{new_settings.hotkey}, mode: {old_mode}→{new_settings.trigger_mode}")
             self.hotkey.stop()
             self.hotkey = HotkeyManager(mode=TriggerMode(new_settings.trigger_mode))
             self.hotkey.on_start = self._on_record_start
@@ -181,14 +188,14 @@ class GoodVoiceApp:
             self.hotkey.start()
 
         # HUD theme change → recreate HUD
-        if old.hud_theme != new_settings.hud_theme:
-            print(f"[CFG] HUD theme changed: {old.hud_theme}→{new_settings.hud_theme}")
+        if old_theme != new_settings.hud_theme:
+            print(f"[CFG] HUD theme changed: {old_theme}→{new_settings.hud_theme}")
             self.hud.hide()
             self.hud = create_hud(new_settings.hud_theme)
 
         # Model change → reload in background
-        if old.model_size != new_settings.model_size:
-            print(f"[CFG] model changed: {old.model_size}→{new_settings.model_size}, reloading...")
+        if old_model != new_settings.model_size:
+            print(f"[CFG] model changed: {old_model}→{new_settings.model_size}, reloading...")
             self._cmd("state", HudState.THINKING)
             self._cmd("text", f"Loading {new_settings.model_size}...")
             self._pending_model = new_settings.model_size
@@ -240,9 +247,12 @@ class GoodVoiceApp:
 
         print(f"[REC] аудио: {len(audio)/16000:.1f}с, распознавание...")
 
+        # Capture transcriber reference — model reload won't affect this recording
+        t = self.transcriber
+
         def _do_transcribe():
             try:
-                text = self.transcriber.transcribe(
+                text = t.transcribe(
                     audio,
                     language=self.settings.language,
                     punctuation=self.settings.punctuation,
