@@ -58,6 +58,7 @@ class GoodVoiceApp:
         self._rec_start = 0.0
         self._settings_win = None
         self._hud_visible = True
+        self._pending_model = None
 
         self._q = queue.Queue()
         self.recorder.on_volume = lambda rms: self._q.put(("rms", rms))
@@ -156,6 +157,13 @@ class GoodVoiceApp:
     def _on_settings_saved(self, new_settings):
         """Apply settings changes live without restart."""
         old = self.settings
+        print(f"[CFG] comparing: model={old.model_size}→{new_settings.model_size}, lang={old.language}→{new_settings.language}")
+
+        # Language change → update HUD immediately
+        if old.language != new_settings.language:
+            print(f"[CFG] language changed: {old.language}→{new_settings.language}")
+            lang = new_settings.language.upper() if new_settings.language != "auto" else "AUTO"
+            self._cmd("lang", lang)
 
         # Hotkey change → restart hotkey manager
         if old.hotkey != new_settings.hotkey or old.trigger_mode != new_settings.trigger_mode:
@@ -179,19 +187,23 @@ class GoodVoiceApp:
             print(f"[CFG] model changed: {old.model_size}→{new_settings.model_size}, reloading...")
             self._cmd("state", HudState.THINKING)
             self._cmd("text", f"Loading {new_settings.model_size}...")
-            threading.Thread(target=self._reload_model, args=(new_settings.model_size,), daemon=True).start()
+            self._pending_model = new_settings.model_size
+            threading.Thread(target=self._reload_model, daemon=True).start()
 
         # Update live settings reference
         self.settings = new_settings
-        print(f"[CFG] settings applied: lang={new_settings.language}, punct={new_settings.punctuation}")
+        print(f"[CFG] settings applied OK")
 
-    def _reload_model(self, model_size):
+    def _reload_model(self):
         """Reload whisper model in background thread."""
+        model_size = self._pending_model
         try:
             from transcriber import Transcriber
-            self.transcriber = Transcriber(model_size=model_size)
-            self.transcriber.load_model()
-            print(f"[CFG] model {model_size} loaded")
+            print(f"[CFG] loading model {model_size}...")
+            new_t = Transcriber(model_size=model_size)
+            new_t.load_model()
+            self.transcriber = new_t
+            print(f"[CFG] model {model_size} loaded OK")
             self._cmd("text", "")
             self._cmd("state", HudState.IDLE)
         except Exception as e:

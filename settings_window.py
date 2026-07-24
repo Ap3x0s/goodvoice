@@ -690,12 +690,24 @@ class SettingsWindow(QWidget):
         self._lang = self.settings.ui_language
         if self._on_save:
             self._on_save(self.settings)
-        # Visual feedback: flash "Saved" on button
+        # Visual feedback: show check icon briefly
         btn = self.sender()
         if btn:
-            old = btn.text()
-            btn.setText("✓")
-            QTimer.singleShot(800, lambda: btn.setText(old))
+            old_icon = btn.icon()
+            check_path = Path(__file__).parent / "assets" / "icons" / "check.svg"
+            if check_path.exists():
+                px = QPixmap(str(check_path))
+                tinted = QPixmap(px.size())
+                tinted.fill(QColor(0, 0, 0, 0))
+                painter = QPainter(tinted)
+                painter.drawPixmap(0, 0, px)
+                painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                painter.fillRect(tinted.rect(), QColor("#22C55E"))
+                painter.end()
+                btn.setIcon(QIcon(tinted))
+                btn.setIconSize(QSize(18, 18))
+            btn.setText("")
+            QTimer.singleShot(800, lambda: (btn.setIcon(old_icon), btn.setIconSize(QSize(0,0)), btn.setText(_t("btn_save", self._lang))))
 
 
 def open_settings(on_save=None):
