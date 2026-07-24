@@ -53,7 +53,7 @@ STRINGS = {
         "lang_ru": "Русский", "lang_en": "English",
         "wk1": "1 неделя", "wk2": "2 недели", "wk3": "3 недели",
         "wk4": "4 недели", "wk5": "5 неделя", "wk6": "6 неделя", "wk_all": "За всё время",
-        "days": ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"],
+        "words_short": "слов", "days": ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"],
     },
     "en": {
         "nav_main": "General", "nav_stat": "Statistics", "nav_hist": "History",
@@ -73,7 +73,7 @@ STRINGS = {
         "lang_ru": "Русский", "lang_en": "English",
         "wk1": "1 week", "wk2": "2 weeks", "wk3": "3 weeks",
         "wk4": "4 weeks", "wk5": "5 weeks", "wk6": "6 weeks", "wk_all": "All time",
-        "days": ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
+        "words_short": "words", "days": ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
     },
 }
 
@@ -240,9 +240,10 @@ class Nav(QPushButton):
 # ── Chart ────────────────────────────────────────────────────────
 
 class Chart(QWidget):
-    def __init__(self, data):
+    def __init__(self, data, lang="ru"):
         super().__init__()
         self.data = data
+        self._lang = lang
         self.setMinimumHeight(180)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._h = -1
@@ -255,7 +256,7 @@ class Chart(QWidget):
             self.update()
             if 0 <= i < len(self.data):
                 l, v, d = self.data[i]
-                QToolTip.showText(e.globalPosition().toPoint(), f"{d}: {v} \u0441\u043b\u043e\u0432", self)
+                QToolTip.showText(e.globalPosition().toPoint(), f"{d}: {v} {_t('words_short', self._lang)}", self)
             else: QToolTip.hideText()
 
     def leaveEvent(self, e): self._h = -1; self.update(); QToolTip.hideText()
@@ -308,9 +309,10 @@ class Chart(QWidget):
 # ── History row ──────────────────────────────────────────────────
 
 class Row(QFrame):
-    def __init__(self, entry):
+    def __init__(self, entry, lang="ru"):
         super().__init__()
         self._text = entry["text"]
+        self._lang = lang
         self.setFixedHeight(56)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setStyleSheet(f"QFrame {{ background: {CARD}; border: 1px solid {BDR}; }} QFrame:hover {{ border-color: rgba(0,102,255,0.3); }}")
@@ -330,7 +332,7 @@ class Row(QFrame):
         ml.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         layout.addWidget(ml, 1)
         wc = entry.get("word_count", len(self._text.split()))
-        chip = QLabel(f"{wc} \u0441\u043b\u043e\u0432")
+        chip = QLabel(f"{wc} {_t('words_short', self._lang)}")
         chip.setFont(QFont("Consolas", 10))
         chip.setStyleSheet(f"color:{AC};background:rgba(0,102,255,8);border:1px solid rgba(0,102,255,40);padding:4px 10px;")
         chip.setFixedWidth(76)
@@ -644,7 +646,7 @@ class SettingsWindow(QWidget):
             t = QLabel(_t("activity",L))
             t.setFont(QFont("Consolas",11)); t.setStyleSheet(f"color:{T3};background:transparent;border:none;letter-spacing:1px;")
             fl.addWidget(t)
-            self._chart = Chart([]); self._chart.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            self._chart = Chart([], L); self._chart.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
             fl.addWidget(self._chart, 1); lay.addWidget(f, 1)
         else:
             lbl = QLabel(_t("no_data",L))
@@ -691,7 +693,7 @@ class SettingsWindow(QWidget):
             lbl.setFont(QFont(FN,13)); lbl.setStyleSheet(f"color:{T3};padding:40px;border:none;")
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter); lay.addWidget(lbl)
         else:
-            for e in entries: lay.addWidget(Row(e))
+            for e in entries: lay.addWidget(Row(e, L))
             lay.addSpacing(8)
             btn = QPushButton(_t("clear_hist",L))
             btn.setObjectName("danger"); btn.clicked.connect(self._clr)
